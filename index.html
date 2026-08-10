@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fangoo Market - Tu Tienda Central Segura</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#059669">
+</head>
+<body class="bg-gray-50 font-sans pb-24" oncontextmenu="return false;">
+
+  <!-- Encabezado -->
+  <header class="bg-white border-b sticky top-0 z-50 px-4 py-3 flex justify-between items-center shadow-sm">
+    <div class="flex items-center space-x-2">
+      <h1 class="text-xl font-black text-emerald-600 tracking-tight">fangoo<span class="text-gray-800">market</span></h1>
+    </div>
+    <button onclick="abrirModalVendedor()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-full text-xs font-bold shadow-sm transition">
+      + Vender
+    </button>
+  </header>
+
+  <!-- Categorías -->
+  <nav class="bg-white border-b px-4 py-2 overflow-x-auto whitespace-nowrap flex space-x-2 text-xs">
+    <button onclick="filtrarCategoria('Todos')" class="cat-btn bg-gray-900 text-white px-3 py-1.5 rounded-full font-medium transition">Todo</button>
+    <button onclick="filtrarCategoria('Ropa')" class="cat-btn bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full font-medium hover:bg-gray-200 transition">Ropa</button>
+    <button onclick="filtrarCategoria('Calzado')" class="cat-btn bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full font-medium hover:bg-gray-200 transition">Calzado</button>
+    <button onclick="filtrarCategoria('Electrónica')" class="cat-btn bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full font-medium hover:bg-gray-200 transition">Electrónica</button>
+    <button onclick="filtrarCategoria('Hogar')" class="cat-btn bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full font-medium hover:bg-gray-200 transition">Hogar</button>
+  </nav>
+
+  <!-- Catálogo -->
+  <main class="p-3 max-w-2xl mx-auto min-h-[60vh]">
+    <div id="grid-productos" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <p class="col-span-full text-center text-gray-400 py-12 text-sm">Cargando catálogo...</p>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-10 border-t bg-white py-6 px-4 text-center text-xs text-gray-500 space-y-2">
+    <p>© 2026 Fangoo Market - Malabo, Guinea Ecuatorial</p>
+  </footer>
+
+  <!-- Modal: Vender -->
+  <div id="modal-vendedor" class="fixed inset-0 bg-black bg-opacity-60 hidden z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl p-5 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div class="flex justify-between items-center mb-4 border-b pb-2">
+        <h3 class="text-base font-bold text-gray-800">Publicar Producto</h3>
+        <button onclick="cerrarModalVendedor()" class="text-gray-400 hover:text-gray-600 font-bold text-lg">✕</button>
+      </div>
+
+      <form id="form-vendedor" onsubmit="guardarProducto(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Foto del producto</label>
+          <input type="file" id="v-foto" accept="image/*" required class="w-full border border-dashed border-gray-300 p-3 rounded-xl text-xs bg-gray-50">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Nombre del Producto</label>
+          <input type="text" id="v-nombre" placeholder="Ej: Zapatillas Nike" maxlength="50" required class="w-full border border-gray-300 p-2.5 rounded-xl text-sm outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Categoría</label>
+            <select id="v-categoria" class="w-full border border-gray-300 p-2.5 rounded-xl text-sm bg-white outline-none">
+              <option value="Ropa">Ropa</option>
+              <option value="Calzado">Calzado</option>
+              <option value="Electrónica">Electrónica</option>
+              <option value="Hogar">Hogar</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Stock</label>
+            <input type="number" id="v-stock" placeholder="1" min="0" value="1" required class="w-full border border-gray-300 p-2.5 rounded-xl text-sm outline-none">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Precio (XAF)</label>
+          <input type="number" id="v-precio" placeholder="0" min="100" max="10000000" required class="w-full border border-gray-300 p-2.5 rounded-xl text-sm outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Tu Nombre / Local</label>
+          <input type="text" id="v-vendedor" placeholder="Ej: Tienda Sam Malabo" maxlength="40" required class="w-full border border-gray-300 p-2.5 rounded-xl text-sm outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Tu WhatsApp</label>
+          <input type="tel" id="v-telefono" placeholder="222xxxxxx" maxlength="15" required class="w-full border border-gray-300 p-2.5 rounded-xl text-sm outline-none">
+        </div>
+        <div class="pt-2">
+          <button type="submit" id="btn-publicar" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl text-sm font-bold shadow transition">
+            Publicar Ahora
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Detalle -->
+  <div id="modal-detalle" class="fixed inset-0 bg-black bg-opacity-70 hidden z-50 flex items-center justify-center p-3">
+    <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div class="relative bg-black flex justify-center items-center h-56">
+        <img id="d-img" src="" class="max-h-full max-w-full object-contain" alt="Detalle">
+        <button onclick="cerrarModalDetalle()" class="absolute top-3 right-3 bg-black bg-opacity-50 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">✕</button>
+      </div>
+
+      <div class="p-4 overflow-y-auto space-y-3 flex-1">
+        <div class="flex justify-between items-start">
+          <div>
+            <h2 id="d-titulo" class="text-lg font-bold text-gray-900"></h2>
+            <p id="d-precio" class="text-xl font-extrabold text-emerald-600 mt-0.5"></p>
+          </div>
+          <span id="d-stock" class="bg-gray-100 text-gray-700 text-xs px-2.5 py-1 rounded-full font-medium"></span>
+        </div>
+
+        <p class="text-xs text-gray-500">Vendedor: <strong id="d-vendedor" class="text-gray-800"></strong></p>
+
+        <div class="bg-gray-50 p-3 rounded-xl space-y-2 border border-gray-100">
+          <p class="text-xs font-bold text-gray-700">📦 Datos para entrega</p>
+          <input type="text" id="c-nombre" placeholder="Tu Nombre Completo" class="w-full bg-white border border-gray-300 p-2 rounded-lg text-xs outline-none">
+          <input type="tel" id="c-telefono" placeholder="Tu WhatsApp" class="w-full bg-white border border-gray-300 p-2 rounded-lg text-xs outline-none">
+          <input type="text" id="c-direccion" placeholder="Barrio / Dirección en Malabo" class="w-full bg-white border border-gray-300 p-2 rounded-lg text-xs outline-none">
+        </div>
+      </div>
+
+      <div class="p-3 border-t bg-white">
+        <button id="btn-pedir" onclick="procesarPedido()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl text-sm font-bold shadow transition">
+          🛒 Pedir por WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "https://sheetdb.io/api/v1/mfhpb8t5lqc0s";
+    const TELEFONO_ADMIN = "240555225370";
+    const COMISION_ENVIO = 1000;
+
+    let productos = [];
+    let productoSeleccionado = null;
+
+    window.onload = cargarProductos;
+
+    function sanitizar(str) {
+      if (!str) return "";
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function cargarProductos() {
+      fetch(API_URL)
+      .then(res => res.json())
+      .then(data => {
+          productos = data;
+          mostrarProductos(productos);
+        })
+      .catch(err => {
+          document.getElementById('grid-productos').innerHTML = '<p class="col-span-full text-center text-red-500 text-sm">Error al cargar.</p>';
+        });
+    }
+
+    function mostrarProductos(lista) {
+      const grid = document.getElementById('grid-productos');
+      grid.innerHTML = '';
+
+      if (!lista || lista.length === 0) {
+        grid.innerHTML = '<p class="col-span-full text-center text-gray-400 py-12 text-sm">No hay productos.</p>';
+        return;
+      }
+
+      lista.reverse().forEach(p => {
+        const stock = Number(p.stock || 0);
+        const agotado = stock <= 0;
+        const cardClass = agotado? 'grayscale opacity-60' : 'hover:shadow-md';
+
+        grid.innerHTML += `
+          <div onclick="${agotado? '' : `verDetalle('${p.ID}')`}" class="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm transition cursor-pointer flex flex-col ${cardClass}">
+            <div class="relative bg-gray-100 h-40">
+              <img src="${p.imagenurl}" class="w-full h-full object-cover" alt="${sanitizar(p.producto)}">
+              <span class="absolute bottom-2 left-2 bg-black bg-opacity-60 text-white text-[10px] px-2 py-0.5 rounded-md font-bold">
+                ${Number(p.precio).toLocaleString()} XAF
+              </span>
+              ${agotado? '<span class="absolute top-2 right-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-md font-bold">AGOTADO</span>' : ''}
+            </div>
+            <div class="p-2.5 flex flex-col justify-between flex-1">
+              <div>
+                <p class="text-xs font-bold text-gray-800 truncate">${sanitizar(p.producto)}</p>
+                <p class="text-[10px] text-gray-400">Stock: ${stock}</p>
+              </div>
+              <p class="text-[10px] text-emerald-600 font-semibold mt-1">${sanitizar(p.vendedor)}</p>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function filtrarCategoria(cat) {
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        if(btn.innerText.toLowerCase() === cat.toLowerCase() || (cat === 'Todos' && btn.innerText === 'Todo')) {
+          btn.className = "cat-btn bg-gray-900 text-white px-3 py-1.5 rounded-full font-medium transition";
+        } else {
+          btn.className = "cat-btn bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full font-medium hover:bg-gray-200 transition";
+        }
+      });
+      const filtrados = cat === 'Todos'? productos : productos.filter(p => p.categoria && p.categoria.toLowerCase() === cat.toLowerCase());
+      mostrarProductos(filtrados);
+    }
+
+    function abrirModalVendedor() { document.getElementById('modal-vendedor').classList.remove('hidden'); }
+    function cerrarModalVendedor() { document.getElementById('modal-vendedor').classList.add('hidden'); }
+
+    async function guardarProducto(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btn-publicar');
+      const fileInput = document.getElementById('v-foto');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        alert("Selecciona una foto primero");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = "Subiendo foto...";
+
+      try {
+        // 1. Comprimir imagen antes de subir
+        const imagenComprimida = await new Promise((resolve, reject) => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+          img.onload = () => {
+            const maxWidth = 1200;
+            const scale = Math.min(1, maxWidth / img.width);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(resolve, 'image/jpeg', 0.7);
+          };
+          img.onerror = reject;
+          img.src = URL.createObjectURL(file);
+        });
+
+        // 2. Subir a Google Drive via Apps Script
+        const fotoDriveUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            const base64 = e.target.result.split(',')[1];
+            try {
+              const res = await fetch('https://script.google.com/macros/s/AKfycbwXEdDQFaTyOf3I-kNcBl352rrh_10fs2T72QcckSVu1ob0a8CBrjPY63QgnQdtQpo/exec', {
+                method: 'POST',
+                body: JSON.stringify({
+                  image: base64,
+                  name: file.name,
+                  type: 'image/jpeg'
+                })
+              });
+              const data = await res.json();
+              if (data.success) {
+                resolve(data.url);
+              } else {
+                throw new Error(data.error || 'Error al subir foto');
+              }
+            } catch (err) {
+              reject(new Error("Error subiendo foto a Drive: " + err.message));
+            }
+          };
+          reader.onerror = () => reject(new Error("Error leyendo archivo"));
+          reader.readAsDataURL(imagenComprimida);
+        });
+
+        btn.innerText = "Guardando producto...";
+
+        // 3. Guardar en SheetDB
+        const nuevoItem = {
+          ID: Date.now().toString(),
+          imagenurl: fotoDriveUrl,
+          producto: document.getElementById('v-nombre').value,
+          categoria: document.getElementById('v-categoria').value,
+          stock: document.getElementById('v-stock').value,
+          precio: document.getElementById('v-precio').value,
+          vendedor: document.getElementById('v-vendedor').value,
+          telefono: document.getElementById('v-telefono').value
+        };
+
+        await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: [nuevoItem] })
+        });
+
+        alert('¡Producto publicado!');
+        cerrarModalVendedor();
+        document.getElementById('form-vendedor').reset();
+        cargarProductos();
+
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Publicar Ahora";
+      }
+    }
+
+    function verDetalle(id) {
+      productoSeleccionado = productos.find(item => item.ID == id);
+      if(!productoSeleccionado) return;
+
+      const stock = Number(productoSeleccionado.stock || 0);
+      document.getElementById('d-img').src = productoSeleccionado.imagenurl;
+      document.getElementById('d-titulo').innerText = productoSeleccionado.producto;
+      document.getElementById('d-precio').innerText = Number(productoSeleccionado.precio).toLocaleString() + " XAF";
+      document.getElementById('d-stock').innerText = stock > 0? `Stock: ${stock}` : 'AGOTADO';
+      document.getElementById('d-vendedor').innerText = productoSeleccionado.vendedor;
+
+      const btnPedir = document.getElementById('btn-pedir');
+      if (stock <= 0) {
+        btnPedir.disabled = true;
+        btnPedir.innerText = "Producto Agotado";
+        btnPedir.className = "w-full bg-gray-400 text-white py-3 rounded-xl text-sm font-bold";
+      } else {
+        btnPedir.disabled = false;
+        btnPedir.innerText = "🛒 Pedir por WhatsApp";
+        btnPedir.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl text-sm font-bold shadow transition";
+      }
+
+      document.getElementById('modal-detalle').classList.remove('hidden');
+    }
+
+    function cerrarModalDetalle() { document.getElementById('modal-detalle').classList.add('hidden'); }
+
+    function procesarPedido() {
+      const stock = Number(productoSeleccionado.stock || 0);
+      if (stock <= 0) {
+        alert("Este producto está agotado");
+        return;
+      }
+
+      const nombre = sanitizar(document.getElementById('c-nombre').value);
+      const tel = sanitizar(document.getElementById('c-telefono').value);
+      const direccion = sanitizar(document.getElementById('c-direccion').value);
+
+      if (!nombre ||!tel ||!direccion) {
+        alert("Completa todos los datos de entrega");
+        return;
+      }
+
+      const subtotal = Number(productoSeleccionado.precio);
+      const total = subtotal + COMISION_ENVIO;
+
+      const mensaje = `🛒 *PEDIDO - FANGOO MARKET*%0A%0A` +
+        `*Producto:* ${productoSeleccionado.producto}%0A` +
+        `*ID:* ${productoSeleccionado.ID}%0A` +
+        `*Precio:* ${subtotal.toLocaleString()} XAF%0A` +
+        `*Vendedor:* ${productoSeleccionado.vendedor} (${productoSeleccionado.telefono})%0A%0A` +
+        `*CLIENTE:*%0A` +
+        `• Nombre: ${nombre}%0A` +
+        `• Teléfono: ${tel}%0A` +
+        `• Dirección: ${direccion}%0A%0A` +
+        `*TOTAL:* ${total.toLocaleString()} XAF`;
+
+      window.open(`https://wa.me/${TELEFONO_ADMIN}?text=${mensaje}`, '_blank');
+      cerrarModalDetalle();
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
+</body>
+</html>
