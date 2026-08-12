@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fangoo Market - Malabo</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#00A651">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="logo.png">
+
+    <style>
+        * {margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
+        body {background:#f5f5f5; padding-bottom: 20px;}
+        .header {background:#00A632;color:white;padding:12px 15px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:90}
+        .header h1 {font-size:20px}
+        .nav-btns {display:flex;gap:5px;}
+        .btn-header {background:white;color:#00A651;border:none;padding:8px 10px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:13px;touch-action:manipulation}
+        .cart-count {background:red;color:white;border-radius:50%;padding:2px 6px;font-size:11px;position:absolute;top:-5px;right:-5px}
+        .cart-btn {position:relative}
+        .container {padding:15px;max-width:600px;margin:auto}
+        .product {background:white;border-radius:12px;padding:15px;margin-bottom:15px;box-shadow:0 2px 5px rgba(0,0,0,0.1);border-left:5px solid #00A651}
+        .product h3 {font-size:18px;margin-bottom:8px;color:#000}
+        .precio {color:#00A651;font-size:22px;font-weight:bold;margin:8px 0}
+        .vendedor {font-size:14px;color:#666;margin-bottom:8px}
+        .categoria {background:#FFD700;color:#000;padding:3px 8px;border-radius:12px;font-size:12px;display:inline-block;margin-bottom:10px}
+        .descripcion {font-size:14px;color:#444;margin-bottom:12px;line-height:1.4}
+        .btn-add {background:#000;color:#FFD700;border:none;width:100%;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer;touch-action:manipulation}
+        
+        .modal {display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:100}
+        .modal-content {background:white;margin:15px auto;padding:20px;border-radius:12px;max-width:500px;max-height:92vh;overflow-y:auto}
+        .close {float:right;font-size:28px;cursor:pointer;touch-action:manipulation}
+        input,textarea,select {width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;font-size:15px}
+        .btn-enviar {background:#25D366;color:white;border:none;width:100%;padding:15px;border-radius:8px;font-weight:bold;font-size:16px;cursor:pointer;margin-top:10px;touch-action:manipulation}
+        .btn-gps {background:#4285F4;color:white;border:none;width:100%;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;margin:8px 0;touch-action:manipulation}
+        .separador {height:2px;background:#eee;margin:15px 0}
+        .titulo-envio {color:#00A651;font-weight:bold;margin-top:10px}
+        .gps-status {font-size:12px;color:#666;text-align:center;margin:5px 0}
+        .tarifa-box {background:#e8f5e9;padding:10px;border-radius:8px;margin:10px 0;font-size:14px;border-left:4px solid #00A651}
+
+        /* BARRA DE SEGUIMIENTO EN 3 PUNTOS */
+        .tracking-container {margin:20px 0;padding:10px 0;}
+        .tracking-steps {display:flex;justify-content:space-between;position:relative;}
+        .tracking-steps::before {content:'';position:absolute;top:18px;left:15%;right:15%;height:4px;background:#ddd;z-index:1;}
+        .tracking-progress-line {position:absolute;top:18px;left:15%;height:4px;background:#00A651;z-index:2;transition:width 0.3s;}
+        .step {position:relative;z-index:3;text-align:center;width:30%;}
+        .step-icon {width:36px;height:36px;border-radius:50%;background:#ddd;color:#666;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-weight:bold;font-size:14px;}
+        .step.active .step-icon {background:#00A651;color:white;}
+        .step-label {font-size:11px;color:#555;font-weight:bold;}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>FANGOO</h1>
+        <div class="nav-btns">
+            <button class="btn-header cart-btn" onclick="abrirCarrito()">
+                🛒<span id="contador" class="cart-count">0</span>
+            </button>
+            <button class="btn-header" onclick="abrirEnvio()">🚚 Paquete</button>
+            <button class="btn-header" onclick="abrirSeguimiento()">📍 Estado</button>
+        </div>
+    </div>
+
+    <div class="container" id="productos">
+        <p style="text-align:center;padding:20px">Cargando productos...</p>
+    </div>
+
+    <div id="modalCarrito" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarCarrito()">×</span>
+            <h2>Tu Pedido</h2>
+            <div id="listaCarrito"></div>
+            
+            <div class="tarifa-box">
+                <label><strong>Zona de Entrega:</strong></label>
+                <select id="tipoZona" onchange="calcularTotal()">
+                    <option value="1000">Entrega Estándar en Malabo (+1,000 XAF)</option>
+                    <option value="1500">Zona de Difícil Acceso (+1,500 XAF)</option>
+                </select>
+            </div>
+
+            <h3>Total Pedido: <span id="total">0</span> XAF</h3>
+            
+            <input type="text" id="clienteNombre" placeholder="Tu nombre completo">
+            <input type="text" id="clienteTelefono" placeholder="Tu WhatsApp: 222xxxxxx">
+            <input type="text" id="clienteDireccion" placeholder="Tu barrio en Malabo">
+            <button class="btn-gps" onclick="obtenerGPSCliente()">📍 Usar mi ubicación GPS para entrega exacta</button>
+            <div id="gpsCliente" class="gps-status"></div>
+            <button class="btn-enviar" onclick="pedirWhatsApp()"> CONFIRMAR PEDIDO</button>
+        </div>
+    </div>
+
+    <div id="modalEnvio" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarEnvio()">×</span>
+            <h2>Enviar Paquete</h2>
+            
+            <div class="tarifa-box">
+                🚚 <strong>Tarifa Envío de Paquete:</strong> 2,500 XAF
+            </div>
+
+            <div class="titulo-envio">TUS DATOS - REMITENTE</div>
+            <input type="text" id="remNombre" placeholder="Tu nombre completo">
+            <input type="text" id="remTelefono" placeholder="Tu WhatsApp: 240xxxxxx">
+            <input type="text" id="remDireccion" placeholder="Tu barrio/dirección">
+            <button class="btn-gps" onclick="obtenerGPS()">📍 Usar mi ubicación GPS actual</button>
+            <div id="gpsRemitente" class="gps-status"></div>
+            
+            <div class="separador"></div>
+            
+            <div class="titulo-envio">DATOS DESTINATARIO</div>
+            <input type="text" id="destNombre" placeholder="Nombre de quien recibe">
+            <input type="text" id="destTelefono" placeholder="WhatsApp de quien recibe">
+            <input type="text" id="destDireccion" placeholder="Barrio/dirección de entrega">
+            
+            <div class="separador"></div>
+            
+            <div class="titulo-envio">DETALLES DEL PAQUETE</div>
+            <select id="tipoPaquete">
+                <option value="">¿Qué envías?</option>
+                <option value="Documentos">Documentos</option>
+                <option value="Comida">Comida</option>
+                <option value="Ropa">Ropa</option>
+                <option value="Gas/Combustible">Gas/Combustible</option>
+                <option value="Otro">Otro</option>
+            </select>
+            <textarea id="descripcionPaquete" placeholder="Describe: peso, tamaño, instrucciones..."></textarea>
+            
+            <button class="btn-enviar" onclick="enviarPaqueteWhatsApp()"> Solicitar Recogida (2,500 XAF)</button>
+        </div>
+    </div>
+
+    <div id="modalSeguimiento" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarSeguimiento()">×</span>
+            <h2>Seguimiento de Pedido</h2>
+            <p style="font-size:13px;color:#666;margin-bottom:15px;">Estado actual de tu último pedido o envío de paquete:</p>
+
+            <div id="trackingInfo">
+                <div class="tracking-container">
+                    <div class="tracking-steps">
+                        <div class="tracking-progress-line" id="progressLine" style="width: 0%;"></div>
+                        
+                        <div class="step active" id="step1">
+                            <div class="step-icon">1</div>
+                            <div class="step-label">Solicitado</div>
+                        </div>
+                        
+                        <div class="step" id="step2">
+                            <div class="step-icon">2</div>
+                            <div class="step-label">En Camino</div>
+                        </div>
+                        
+                        <div class="step" id="step3">
+                            <div class="step-icon">3</div>
+                            <div class="step-label">Entregado</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="statusDetalle" style="background:#f9f9f9;padding:12px;border-radius:8px;font-size:14px;text-align:center;">
+                    <strong>Punto 1:</strong> Tu pedido ha sido enviado a WhatsApp y está registrado en la central Fangoo.
+                </div>
+            </div>
+
+            <button class="btn-enviar" style="background:#00A651;margin-top:15px;" onclick="cerrarSeguimiento()">Entendido</button>
+        </div>
+    </div>
+
+<script>
+const SHEETDB_URL = "https://sheetdb.io/api/v1/hyra8255u0t4k";
+const WHATSAPP_FANGOO = "240555225370"; 
+
+let productos = [];
+let carrito = [];
+let gpsCliente = null;
+let gpsRemitente = null;
+
+// GESTIÓN DE MODALES (Solución al bloqueo de botones)
+function abrirCarrito() {
+    cerrarEnvio();
+    cerrarSeguimiento();
+    renderizarCarrito();
+    document.getElementById('modalCarrito').style.display = 'block';
+}
+function cerrarCarrito() { document.getElementById('modalCarrito').style.display = 'none'; }
+
+function abrirEnvio() {
+    cerrarCarrito();
+    cerrarSeguimiento();
+    document.getElementById('modalEnvio').style.display = 'block';
+}
+function cerrarEnvio() { document.getElementById('modalEnvio').style.display = 'none'; }
+
+function abrirSeguimiento() {
+    cerrarCarrito();
+    cerrarEnvio();
+    actualizarPuntosSeguimiento(1); // Por defecto en Punto 1 (Solicitado)
+    document.getElementById('modalSeguimiento').style.display = 'block';
+}
+function cerrarSeguimiento() { document.getElementById('modalSeguimiento').style.display = 'none'; }
+
+// CARGA DE PRODUCTOS
+async function cargarProductos() {
+    try {
+        const res = await fetch(SHEETDB_URL);
+        productos = await res.json();
+        mostrarProductos();
+    } catch(e) {
+        document.getElementById('productos').innerHTML = '<p style="text-align:center;color:red;padding:20px;">Error al conectar con el servidor.</p>';
+    }
+}
+
+function mostrarProductos() {
+    const cont = document.getElementById('productos');
+    if(!Array.isArray(productos) || productos.length === 0) {
+        cont.innerHTML = '<p style="text-align:center;padding:40px">No hay productos hoy. Vuelve más tarde.</p>';
+        return;
+    }
+    cont.innerHTML = productos.map(p => {
+        const nombreProd = p.producto || p.Producto || p.nombre || p.Nombre || 'Producto';
+        const precioProd = p.precio || p.Precio || 0;
+        const vendedorProd = p.vendedor || p.Vendedor || 'Fangoo Market';
+        const categoriaProd = p.categoria || p.Categoria || 'General';
+        const descripcionProd = p.descripcion || p.Descripcion || 'Entrega rápida en Malabo';
+
+        return `
+            <div class="product">
+                <div class="categoria">${categoriaProd}</div>
+                <h3>${nombreProd}</h3>
+                <div class="precio">${Number(precioProd).toLocaleString()} XAF</div>
+                <div class="vendedor">Vendedor: ${vendedorProd}</div>
+                <div class="descripcion">${descripcionProd}</div>
+                <button class="btn-add" onclick='agregarCarrito(${JSON.stringify(p).replace(/'/g,"\\'")})'>+ AÑADIR AL PEDIDO</button>
+            </div>
+        `;
+    }).join('');
+}
+
+function agregarCarrito(producto) {
+    carrito.push(producto);
+    document.getElementById('contador').innerText = carrito.length;
+}
+
+function renderizarCarrito() {
+    const lista = document.getElementById('listaCarrito');
+    lista.innerHTML = carrito.length === 0 ? '<p style="padding:10px 0">Carrito vacío</p>' : carrito.map(p => {
+        const nombre = p.producto || p.nombre;
+        const precio = p.precio || 0;
+        const vendedor = p.vendedor || 'Fangoo';
+        return `
+            <div style="border-bottom:1px solid #eee;padding:8px 0;font-size:14px">
+                <strong>${nombre}</strong><br>${Number(precio).toLocaleString()} XAF - Vendedor: ${vendedor}
+            </div>
+        `;
+    }).join('');
+    calcularTotal();
+}
+
+function calcularTotal() {
+    const subtotal = carrito.reduce((sum, p) => sum + Number(p.precio || p.Precio || 0), 0);
+    const comision = Number(document.getElementById('tipoZona').value || 1000);
+    const total = subtotal > 0 ? (subtotal + comision) : 0;
+    document.getElementById('total').innerText = total.toLocaleString();
+}
+
+// GPS
+function obtenerGPSCliente() {
+    const status = document.getElementById('gpsCliente');
+    status.innerText = 'Obteniendo ubicación...';
+    if(navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            gpsCliente = `${pos.coords.latitude},${pos.coords.longitude}`;
+            status.innerText = `✅ GPS capturado para entrega exacta`;
+            status.style.color = 'green';
+        }, () => {
+            status.innerText = '❌ Permite la ubicación o escribe tu barrio';
+            status.style.color = 'red';
+        });
+    } else {
+        status.innerText = '❌ Navegador no soporta GPS';
+    }
+}
+
+function obtenerGPS() {
+    const status = document.getElementById('gpsRemitente');
+    status.innerText = 'Obteniendo ubicación...';
+    if(navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            gpsRemitente = `${pos.coords.latitude},${pos.coords.longitude}`;
+            status.innerText = `✅ GPS capturado`;
+            status.style.color = 'green';
+        }, () => {
+            status.innerText = '❌ Permite la ubicación para usar GPS';
+            status.style.color = 'red';
+        });
+    } else {
+        status.innerText = '❌ Navegador no soporta GPS';
+    }
+}
+
+function extraerTelefono(texto) {
+    if(!texto) return WHATSAPP_FANGOO;
+    const match = texto.match(/(222|555)\d{6}/);
+    return match ? '240' + match[0] : WHATSAPP_FANGOO;
+}
+
+// PEDIDOS DE PRODUCTOS
+function pedirWhatsApp() {
+    if(carrito.length === 0) return alert('Carrito vacío');
+    const nombre = document.getElementById('clienteNombre').value;
+    const telefono = document.getElementById('clienteTelefono').value;
+    const direccion = document.getElementById('clienteDireccion').value;
+    const comisionEnvio = Number(document.getElementById('tipoZona').value);
+    
+    if(!nombre || !telefono || !direccion) return alert('Rellena tus datos de entrega');
+
+    const vendedores = {};
+    carrito.forEach(p => {
+        const tel = extraerTelefono(p.vendedor);
+        if(!vendedores[tel]) vendedores[tel] = [];
+        vendedores[tel].push(p);
+    });
+
+    let subtotalProductos = 0;
+    let mensajeFangoo = `*📋 NUEVO PEDIDO - LOGÍSTICA FANGOO*%0A%0A`;
+    mensajeFangoo += `*CLIENTE*%0A👤 ${nombre}%0A📱 ${telefono}%0A📍 ${direccion}%0A`;
+    if(gpsCliente) mensajeFangoo += `🗺️ *GPS ENTREGA:* https://maps.google.com/?q=${gpsCliente}%0A`;
+    mensajeFangoo += `%0A*DETALLE COMPLETO DEL PEDIDO:*%0A`;
+
+    Object.keys(vendedores).forEach(telVendedor => {
+        let mensajeVendedor = `*🔔 PEDIDO NUEVO FANGOO MARKET*%0A%0A`;
+        mensajeVendedor += `*CLIENTE*%0A👤 ${nombre}%0A📱 ${telefono}%0A📍 ${direccion}%0A%0A`;
+        mensajeVendedor += `*PRODUCTOS PEDIDOS A TI:*%0A`;
+        let totalVendedor = 0;
+        
+        vendedores[telVendedor].forEach(p => {
+            const nom = p.producto || p.nombre;
+            const prec = p.precio || 0;
+            mensajeVendedor += `📦 ${nom} - ${Number(prec).toLocaleString()} XAF%0A`;
+            totalVendedor += Number(prec);
+            mensajeFangoo += `📦 ${nom} - ${Number(prec).toLocaleString()} XAF%0A Vendedor: ${p.vendedor || 'Fangoo'}%0A Tel: ${telVendedor}%0A`;
+        });
+        
+        subtotalProductos += totalVendedor;
+        mensajeVendedor += `%0A*SUBTOTAL: ${totalVendedor.toLocaleString()} XAF*%0A%0A`;
+        mensajeVendedor += `_El equipo de Fangoo llegará en 10-20 min para retirar el pedido. Confirma disponibilidad._`;
+
+        window.open(`https://wa.me/${telVendedor}?text=${mensajeVendedor}`, '_blank');
+    });
+
+    const totalFinal = subtotalProductos + comisionEnvio;
+
+    setTimeout(() => {
+        mensajeFangoo += `%0A💵 *Subtotal Productos:* ${subtotalProductos.toLocaleString()} XAF%0A`;
+        mensajeFangoo += `🛵 *Comisión de Envío:* ${comisionEnvio.toLocaleString()} XAF%0A`;
+        mensajeFangoo += `💰 *TOTAL A COBRAR:* ${totalFinal.toLocaleString()} XAF%0A%0A`;
+        mensajeFangoo += `_ACCIÓN: Coordinar recogida y entrega al cliente._`;
+        window.open(`https://wa.me/${WHATSAPP_FANGOO}?text=${mensajeFangoo}`, '_blank');
+    }, 1500);
+
+    alert('¡Pedido enviado! Redirigiendo a WhatsApp...');
+    carrito = []; gpsCliente = null;
+    document.getElementById('contador').innerText = 0;
+    cerrarCarrito();
+}
+
+// ENVÍO DE PAQUETES (TARIFA 2,500 XAF)
+function enviarPaqueteWhatsApp() {
+    const remNombre = document.getElementById('remNombre').value;
+    const remTelefono = document.getElementById('remTelefono').value;
+    const remDireccion = document.getElementById('remDireccion').value;
+    const destNombre = document.getElementById('destNombre').value;
+    const destTelefono = document.getElementById('destTelefono').value;
+    const destDireccion = document.getElementById('destDireccion').value;
+    const tipo = document.getElementById('tipoPaquete').value;
+    const desc = document.getElementById('descripcionPaquete').value;
+
+    if(!remNombre || !remTelefono || !destNombre || !destTelefono || !tipo) return alert('Rellena los campos obligatorios');
+
+    let mensaje = `*📦 SOLICITUD ENVÍO PAQUETE - FANGOO*%0A%0A`;
+    mensaje += `*REMITENTE*%0A👤 ${remNombre}%0A📱 ${remTelefono}%0A📍 ${remDireccion}%0A`;
+    if(gpsRemitente) mensaje += `🗺️ GPS: https://maps.google.com/?q=${gpsRemitente}%0A`;
+    mensaje += `%0A*DESTINATARIO*%0A👤 ${destNombre}%0A📱 ${destTelefono}%0A📍 ${destDireccion}%0A%0A`;
+    mensaje += `*PAQUETE*%0A📦 Tipo: ${tipo}%0A📝 Descripción: ${desc}%0A`;
+    mensaje += `🛵 *Tarifa de Envío Paquete:* 2,500 XAF%0A%0A`;
+    mensaje += `_El repartidor de Fangoo llegará en 10-20 min para retirar el paquete._`;
+
+    window.open(`https://wa.me/${WHATSAPP_FANGOO}?text=${mensaje}`, '_blank');
+    gpsRemitente = null;
+    cerrarEnvio();
+}
+
+// SISTEMA DE SEGUIMIENTO EN 3 PUNTOS
+function actualizarPuntosSeguimiento(punto) {
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const step3 = document.getElementById('step3');
+    const progressLine = document.getElementById('progressLine');
+    const statusDetalle = document.getElementById('statusDetalle');
+
+    // Limpiamos estados
+    step1.classList.remove('active');
+    step2.classList.remove('active');
+    step3.classList.remove('active');
+
+    if(punto === 1) {
+        step1.classList.add('active');
+        progressLine.style.width = '0%';
+        statusDetalle.innerHTML = '<strong>Punto 1: Solicitado</strong><br>Tu pedido/envío se ha registrado en WhatsApp. Esperando asignación de repartidor.';
+    } else if(punto === 2) {
+        step1.classList.add('active');
+        step2.classList.add('active');
+        progressLine.style.width = '35%';
+        statusDetalle.innerHTML = '<strong>Punto 2: En Camino</strong><br>El repartidor de Fangoo está recogiendo el paquete/producto para llevarlo a su destino.';
+    } else if(punto === 3) {
+        step1.classList.add('active');
+        step2.classList.add('active');
+        step3.classList.add('active');
+        progressLine.style.width = '70%';
+        statusDetalle.innerHTML = '<strong>Punto 3: Entregado</strong><br>¡El pedido ha sido entregado con éxito al destinatario!';
+    }
+}
+
+cargarProductos();
+</script>
+</body>
+</html>
