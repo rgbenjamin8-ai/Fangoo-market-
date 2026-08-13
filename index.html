@@ -443,17 +443,30 @@ function actualizarPuntosSeguimiento(punto) {
 }
 
 function generarAlbaranPaquete(datos) {
-    const ventana = window.open('', '_blank');
-    ventana.document.write(`
+    // 1. Crear un marco de impresión invisible (compatible con móviles)
+    let iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    // 2. Escribir el contenido del albarán
+    let doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+        <!DOCTYPE html>
         <html>
         <head>
             <title>Albarán de Envío - Fangoo</title>
             <style>
-                body { font-family: Arial, sans-serif; padding: 20px; font-size: 13px; }
+                body { font-family: Arial, sans-serif; padding: 20px; font-size: 13px; color: #333; }
                 .titulo { color: #00A651; font-size: 18px; font-weight: bold; border-bottom: 2px solid #00A651; padding-bottom: 5px; }
-                .caja { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 5px; }
+                .caja { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 5px; background: #fafafa; }
                 .firmas { display: flex; justify-content: space-between; margin-top: 40px; }
-                .firma-box { border-top: 1px solid #000; width: 45%; text-align: center; paddingTop: 5px; }
+                .firma-box { border-top: 1px solid #000; width: 45%; text-align: center; padding-top: 5px; }
             </style>
         </head>
         <body>
@@ -474,6 +487,12 @@ function generarAlbaranPaquete(datos) {
                 Dirección: ${datos.destDireccion}
             </div>
 
+            <div class="caja">
+                <strong>DETALLES DEL PAQUETE:</strong><br>
+                Tipo: ${datos.tipo || 'Paquete'}<br>
+                Descripción: ${datos.desc || 'Sin descripción'}
+            </div>
+
             <div class="firmas">
                 <div class="firma-box">Firma Remitente</div>
                 <div class="firma-box">Firma Destinatario</div>
@@ -481,8 +500,14 @@ function generarAlbaranPaquete(datos) {
         </body>
         </html>
     `);
-    ventana.document.close();
-    ventana.print();
+    doc.close();
+
+    // 3. Dar medio segundo de espera para que Android cargue el diseño antes de abrir el visor PDF
+    setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+        setTimeout(() => document.body.removeChild(iframe), 2000);
+    }, 500);
 }
 
 function generarAlbaranProducto(datos) {
