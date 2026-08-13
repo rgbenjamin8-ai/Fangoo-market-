@@ -455,15 +455,34 @@ function obtenerSiguienteNumAlbaran(tipo) {
     return tipo + '-' + ultimoNum.toString().padStart(5, '0');
 }
 
-// FUNCIÓN AUXILIAR: Evita que te hackeen el albarán si meten <script>
+// FUNCIÓN AUXILIAR: Evita hackeos
 function escapeHTML(texto) {
     if (!texto) return '';
-    return String(texto)
-       .replace(/&/g, '&amp;')
-       .replace(/</g, '&lt;')
-       .replace(/>/g, '&gt;')
-       .replace(/"/g, '&quot;')
-       .replace(/'/g, '&#039;');
+    return String(texto).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+// FUNCIÓN CLAVE: Esta sí abre en móvil y WhatsApp
+function abrirAlbaranHTML(htmlContenido, nombreArchivo) {
+    // 1. Creamos un Blob con el HTML
+    const blob = new Blob([htmlContenido], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    // 2. Intentamos abrir nueva pestaña
+    const ventana = window.open(url, '_blank');
+    
+    // 3. Si falla por bloqueo de pop-ups, forzamos descarga
+    if (!ventana || ventana.closed || typeof ventana.closed == 'undefined') {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = nombreArchivo + '.html'; // Se descarga como HTML
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        alert('Pop-ups bloqueados. Se descargó el albarán. Ábrelo y dale a "Imprimir > Guardar como PDF"');
+    }
+    
+    // Liberamos memoria después de 1 min
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 // 1. ALBARÁN PARA "ENVIAR PAQUETE"
@@ -471,9 +490,6 @@ function generarAlbaranPaquete(datos) {
     if (!datos.remNombre ||!datos.destNombre) {
         return alert('Faltan datos del remitente o destinatario');
     }
-
-    const ventana = window.open('', '_blank');
-    if (!ventana) return alert('Activa las ventanas emergentes en tu navegador para generar el albarán.');
 
     const numAlbaran = obtenerSiguienteNumAlbaran('FP');
     const fecha = new Date().toLocaleDateString('es-GQ', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -502,55 +518,44 @@ function generarAlbaranPaquete(datos) {
         </head>
         <body>
             <button class="btn-imprimir" onclick="window.print()">📄 Guardar en PDF / Imprimir</button>
-
-            <div class="titulo">FANGOO EXPRESS — ALBARÁN DE ENVÍO</div>
+            <div class="titulo">FANGOO EXPRESS — GUÍA DE ENVÍO</div>
             <div class="num-albaran">Nº Albarán: ${numAlbaran} | Fecha: ${fecha}</div>
-
             <div class="caja">
                 <strong>1. REMITENTE (Quien envía):</strong><br>
                 Nombre: ${escapeHTML(datos.remNombre)}<br>
                 Teléfono: ${escapeHTML(datos.remTelefono)}<br>
                 Dirección: ${escapeHTML(datos.remDireccion)}
             </div>
-
             <div class="caja">
                 <strong>2. DESTINATARIO (Quien recibe):</strong><br>
                 Nombre: ${escapeHTML(datos.destNombre)}<br>
                 Teléfono: ${escapeHTML(datos.destTelefono)}<br>
                 Dirección: ${escapeHTML(datos.destDireccion)}
             </div>
-
             <div class="caja">
                 <strong>3. DETALLES DEL PAQUETE:</strong><br>
                 Tipo: ${escapeHTML(datos.tipo) || 'Otro'}<br>
                 Descripción: ${escapeHTML(datos.desc) || 'Sin descripción'}<br>
                 <strong>Tarifa de Envío:</strong> 2,500 XAF
             </div>
-
             <div class="firmas">
                 <div class="firma-box">Firma Remitente<br>${escapeHTML(datos.remNombre)}</div>
                 <div class="firma-box">Firma Destinatario<br>${escapeHTML(datos.destNombre)}</div>
             </div>
-
             <div class="repartidor-linea"><strong>Nombre del Repartidor:</strong> ${nombreRepartidor}</div>
-
             <div class="footer">Gracias por usar Fangoo Express | Malabo, Guinea Ecuatorial</div>
         </body>
         </html>
     `;
 
-    ventana.document.write(htmlContenido);
-    ventana.document.close();
+    abrirAlbaranHTML(htmlContenido, `Albaran-${numAlbaran}`);
 }
 
-// 2. ALBARÁN PARA PRODUCTOS DEL CARRITO
+// 2. ALBARÁN PARA PRODUCTOS - Usa la misma función abrirAlbaranHTML
 function generarAlbaranProducto(datos) {
     if (!datos.carrito || datos.carrito.length === 0) {
         return alert('El carrito está vacío');
     }
-
-    const ventana = window.open('', '_blank');
-    if (!ventana) return alert('Activa las ventanas emergentes en tu navegador para generar el albarán.');
 
     let filasProductos = '';
     let precioProductos = 0;
@@ -600,22 +605,18 @@ function generarAlbaranProducto(datos) {
         </head>
         <body>
             <button class="btn-imprimir" onclick="window.print()">📄 Guardar en PDF / Imprimir</button>
-
             <div class="titulo">FANGOO MARKET — ALBARÁN DE ENTREGA</div>
             <div class="num-albaran">Nº Albarán: ${numAlbaran} | Fecha: ${fecha}</div>
-
             <div class="caja">
                 <strong>1. DATOS DEL CLIENTE</strong><br>
                 <strong>Nombre:</strong> ${escapeHTML(datos.clienteNombre)}<br>
                 <strong>Teléfono:</strong> ${escapeHTML(datos.clienteTelefono)}<br>
                 <strong>Dirección:</strong> ${escapeHTML(datos.clienteDireccion)}
             </div>
-
             <div class="caja">
                 <strong>2. PRODUCTOS:</strong><br>
                 ${filasProductos}
             </div>
-
             <div class="grid">
                 <div class="bloque-calc">
                     <strong>DESGLOSE:</strong>
@@ -623,7 +624,6 @@ function generarAlbaranProducto(datos) {
                     <div>Coste de entrega: <strong>${costeEntregaZona.toLocaleString()} XAF</strong></div>
                     <div>Coste de envío: <strong>${costeEnvioFijo.toLocaleString()} XAF</strong></div>
                 </div>
-
                 <div class="bloque-calc">
                     <strong>TOTALES:</strong>
                     <div>TOTAL A COBRAR: <strong>${totalCobrar.toLocaleString()} XAF</strong></div>
@@ -631,21 +631,17 @@ function generarAlbaranProducto(datos) {
                     <div>COMISIÓN FANGOO: <strong>${totalComision.toLocaleString()} XAF</strong></div>
                 </div>
             </div>
-
             <div class="firmas">
                 <div class="firma-box">Firma Vendedor<br>${nombreVendedor}</div>
                 <div class="firma-box">Firma Cliente<br>${escapeHTML(datos.clienteNombre)}</div>
             </div>
-
             <div class="repartidor-linea"><strong>Nombre del Repartidor:</strong> ${nombreRepartidor}</div>
-
             <div class="footer">Gracias por comprar en Fangoo Market | Malabo, Guinea Ecuatorial</div>
         </body>
         </html>
     `;
 
-    ventana.document.write(htmlContenido);
-    ventana.document.close();
+    abrirAlbaranHTML(htmlContenido, `Albaran-${numAlbaran}`);
 }
 
 cargarProductos();
