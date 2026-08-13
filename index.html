@@ -388,14 +388,17 @@ function enviarPaqueteWhatsApp() {
     const desc = document.getElementById('descripcionPaquete').value;
 
     if(!remNombre || !remTelefono || !destNombre || !destTelefono || !tipo) return alert('Rellena los campos obligatorios');
-    // Dentro de function enviarPaqueteWhatsApp()
+// Llamada ajustada con todos los campos del mensaje
 generarAlbaranPaquete({
     remNombre: remNombre,
     remTelefono: remTelefono,
     remDireccion: remDireccion,
     destNombre: destNombre,
     destTelefono: destTelefono,
-    destDireccion: destDireccion
+    destDireccion: destDireccion,
+    tipo: tipo,
+    desc: desc,
+    tarifa: "2,500 XAF"
 });
 
     let mensaje = `*📦 SOLICITUD ENVÍO PAQUETE - FANGOO*%0A%0A`;
@@ -446,7 +449,7 @@ function generarAlbaranPaquete(datos) {
     const ventana = window.open('', '_blank');
     
     if (!ventana) {
-        alert('Por favor, permite las ventanas emergentes en tu navegador para ver el albarán.');
+        alert('Por favor, permite las ventanas emergentes en tu navegador.');
         return;
     }
 
@@ -456,7 +459,7 @@ function generarAlbaranPaquete(datos) {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Albarán de Envío - Fangoo</title>
+            <title>Albarán de Envío - Fangoo Express</title>
             <style>
                 body { font-family: Arial, sans-serif; padding: 15px; font-size: 13px; color: #333; }
                 .btn-imprimir {
@@ -483,20 +486,21 @@ function generarAlbaranPaquete(datos) {
                 <strong>1. REMITENTE (Quien envía):</strong><br>
                 Nombre: ${datos.remNombre}<br>
                 Teléfono: ${datos.remTelefono}<br>
-                Dirección: ${datos.remDireccion}
+                Barrio / Dirección: ${datos.remDireccion}
             </div>
 
             <div class="caja">
                 <strong>2. DESTINATARIO (Quien recibe):</strong><br>
                 Nombre: ${datos.destNombre}<br>
                 Teléfono: ${datos.destTelefono}<br>
-                Dirección: ${datos.destDireccion}
+                Barrio / Dirección: ${datos.destDireccion}
             </div>
 
             <div class="caja">
-                <strong>DETALLES DEL PAQUETE:</strong><br>
-                Tipo: ${datos.tipo || 'Paquete'}<br>
-                Descripción: ${datos.desc || 'Sin descripción'}
+                <strong>3. DETALLES DEL PAQUETE:</strong><br>
+                Tipo: ${datos.tipo || 'Otro'}<br>
+                Descripción: ${datos.desc || 'Sin descripción'}<br>
+                <strong>Tarifa de Envío Paquete:</strong> ${datos.tarifa || '2,500 XAF'}
             </div>
 
             <div class="firmas">
