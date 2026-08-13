@@ -411,7 +411,7 @@ function enviarPaqueteWhatsApp() {
     mensaje += `🛵 *Tarifa de Envío Paquete:* 2,500 XAF%0A%0A`;
     mensaje += `_El repartidor de Fangoo llegará en 10-20 min para retirar el paquete._`;
 
-    window.open(`https://wa.me/${WHATSAPP_FANGOO}?text=${mensaje}`, '_blank');
+    window.open(`WhatsApp://send?=phone/${WHATSAPP_FANGOO}?text=${mensaje}`, '_blank');
     gpsRemitente = null;
     cerrarEnvio();
 }
@@ -446,37 +446,43 @@ function actualizarPuntosSeguimiento(punto) {
     }
 }
 
-// IMPRESIÓN DE ALBARANES ADAPTADA A MÓVILES Y PC
 function generarAlbaranPaquete(datos) {
-    const ventana = window.open('', '_blank');
-    if (!ventana) return alert('Por favor, permite las ventanas emergentes.');
+    // Validación rápida
+    if (!datos.remNombre || !datos.destNombre) {
+        return alert('Faltan datos del remitente o destinatario');
+    }
 
-    ventana.document.write(`
+    const ventana = window.open('', '_blank');
+    if (!ventana) return alert('Activa las ventanas emergentes en tu navegador para generar el albarán.');
+
+    const numAlbaran = 'FP-' + Date.now().toString().slice(-6); // FP-123456
+    const fecha = new Date().toLocaleDateString('es-GQ', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    const htmlContenido = `
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Albarán de Envío - Fangoo Express</title>
+            <title>Albarán ${numAlbaran} - Fangoo Express</title>
             <style>
-                body { font-family: Arial, sans-serif; padding: 15px; font-size: 13px; color: #333; }
-                .btn-imprimir {
-                    display: block; width: 100%; padding: 12px; background: #00A651; color: white;
-                    text-align: center; font-weight: bold; border: none; border-radius: 6px;
-                    margin-bottom: 20px; font-size: 15px; cursor: pointer;
-                }
-                .titulo { color: #00A651; font-size: 16px; font-weight: bold; border-bottom: 2px solid #00A651; padding-bottom: 5px; }
+                body { font-family: Arial, sans-serif; padding: 15px; font-size: 13px; color: #333; max-width: 600px; margin: 0 auto; }
+                .btn-imprimir { display: block; width: 100%; padding: 12px; background: #00A651; color: white; text-align: center; font-weight: bold; border: none; border-radius: 6px; margin-bottom: 20px; font-size: 15px; cursor: pointer; }
+                .titulo { color: #00A651; font-size: 18px; font-weight: bold; border-bottom: 2px solid #00A651; padding-bottom: 5px; text-align: center; }
+                .num-albaran { text-align: center; font-weight: bold; margin: 10px 0; }
                 .caja { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 5px; background: #fafafa; }
-                .firmas { display: flex; justify-content: space-between; margin-top: 30px; }
-                .firma-box { border-top: 1px solid #000; width: 45%; text-align: center; padding-top: 5px; }
-                @media print { .btn-imprimir { display: none; } }
+                .caja strong { color: #00A651; }
+                .firmas { display: flex; justify-content: space-between; margin-top: 40px; }
+                .firma-box { border-top: 1px solid #000; width: 45%; text-align: center; padding-top: 5px; font-size: 12px; }
+                .footer { text-align: center; font-size: 11px; margin-top: 20px; color: #666; }
+                @media print { .btn-imprimir { display: none; } body { padding: 0; } }
             </style>
         </head>
         <body>
             <button class="btn-imprimir" onclick="window.print()">📄 Guardar en PDF / Imprimir</button>
 
-            <div class="titulo">FANGOO EXPRESS — GUÍA DE ENVÍO DE PAQUETE</div>
-            <p><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</p>
+            <div class="titulo">FANGOO EXPRESS — GUÍA DE ENVÍO</div>
+            <div class="num-albaran">Nº Albarán: ${numAlbaran} | Fecha: ${fecha}</div>
             
             <div class="caja">
                 <strong>1. REMITENTE (Quien envía):</strong><br>
@@ -496,22 +502,29 @@ function generarAlbaranPaquete(datos) {
                 <strong>3. DETALLES DEL PAQUETE:</strong><br>
                 Tipo: ${datos.tipo || 'Otro'}<br>
                 Descripción: ${datos.desc || 'Sin descripción'}<br>
-                <strong>Tarifa de Envío Paquete:</strong> 2,500 XAF
+                <strong>Tarifa de Envío:</strong> 2,500 XAF
             </div>
 
             <div class="firmas">
                 <div class="firma-box">Firma Remitente</div>
-                <div class="firma-box">Firma Destinatario</div>
+                <div class="firma-box">Firma Repartidor</div>
             </div>
+            <div class="footer">Gracias por usar Fangoo Express | Malabo, Guinea Ecuatorial</div>
         </body>
         </html>
-    `);
+    `;
+
+    ventana.document.write(htmlContenido);
     ventana.document.close();
 }
 
 function generarAlbaranProducto(datos) {
+    if (!datos.carrito || datos.carrito.length === 0) {
+        return alert('El carrito está vacío');
+    }
+
     const ventana = window.open('', '_blank');
-    if (!ventana) return alert('Por favor, permite las ventanas emergentes.');
+    if (!ventana) return alert('Activa las ventanas emergentes en tu navegador para generar el albarán.');
     
     let filasProductos = '';
     let precioProductos = 0;
@@ -520,77 +533,84 @@ function generarAlbaranProducto(datos) {
         const nombre = p.producto || p.nombre || 'Producto';
         const precio = Number(p.precio || 0);
         precioProductos += precio;
-        filasProductos += `<div>• ${nombre}: <strong>${precio.toLocaleString()} XAF</strong> (Vendedor: ${p.vendedor || 'Fangoo'})</div>`;
+        filasProductos += `<div>• ${nombre}: <strong>${precio.toLocaleString()} XAF</strong> - Vendedor: ${p.vendedor || 'Fangoo'}</div>`;
     });
 
     const costeEnvioFijo = 500;
     const costeEntregaZona = Number(datos.comision || 0);
-    
     const reembolsoVendedor = precioProductos - costeEnvioFijo;
     const totalComision = costeEnvioFijo + costeEntregaZona;
     const totalCobrar = precioProductos + costeEntregaZona;
+    const numAlbaran = 'FM-' + Date.now().toString().slice(-6);
+    const fecha = new Date().toLocaleDateString('es-GQ', { day: '2-digit', month: 'long', year: 'numeric' });
 
-    ventana.document.write(`
+    const htmlContenido = `
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Albarán de Productos - Fangoo Market</title>
+            <title>Albarán ${numAlbaran} - Fangoo Market</title>
             <style>
-                body { font-family: Arial, sans-serif; padding: 15px; font-size: 13px; color: #333; }
-                .btn-imprimir {
-                    display: block; width: 100%; padding: 12px; background: #00A651; color: white;
-                    text-align: center; font-weight: bold; border: none; border-radius: 6px;
-                    margin-bottom: 20px; font-size: 15px; cursor: pointer;
-                }
-                .titulo { color: #00A651; font-size: 16px; font-weight: bold; border-bottom: 2px solid #00A651; padding-bottom: 5px; }
+                body { font-family: Arial, sans-serif; padding: 15px; font-size: 13px; color: #333; max-width: 600px; margin: 0 auto; }
+                .btn-imprimir { display: block; width: 100%; padding: 12px; background: #00A651; color: white; text-align: center; font-weight: bold; border: none; border-radius: 6px; margin-bottom: 20px; font-size: 15px; cursor: pointer; }
+                .titulo { color: #00A651; font-size: 18px; font-weight: bold; border-bottom: 2px solid #00A651; padding-bottom: 5px; text-align: center; }
+                .num-albaran { text-align: center; font-weight: bold; margin: 10px 0; }
                 .caja { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 5px; background: #fafafa; }
+                .caja strong { color: #00A651; }
                 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
                 .bloque-calc { border: 1px solid #00A651; padding: 10px; border-radius: 5px; margin-top: 10px; }
-                .firmas { display: flex; justify-content: space-between; margin-top: 30px; }
-                .firma-box { border-top: 1px solid #000; width: 45%; text-align: center; padding-top: 5px; }
-                @media print { .btn-imprimir { display: none; } }
+                .bloque-calc div { margin: 3px 0; }
+                .firmas { display: flex; justify-content: space-between; margin-top: 40px; }
+                .firma-box { border-top: 1px solid #000; width: 45%; text-align: center; padding-top: 5px; font-size: 12px; }
+                .footer { text-align: center; font-size: 11px; margin-top: 20px; color: #666; }
+                @media print { .btn-imprimir { display: none; } body { padding: 0; } }
             </style>
         </head>
         <body>
             <button class="btn-imprimir" onclick="window.print()">📄 Guardar en PDF / Imprimir</button>
 
-            <div class="titulo">FANGOO MARKET — ALBARÁN DE RECOGIDA Y ENTREGA</div>
-            <p><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</p>
+            <div class="titulo">FANGOO MARKET — ALBARÁN DE ENTREGA</div>
+            <div class="num-albaran">Nº Albarán: ${numAlbaran} | Fecha: ${fecha}</div>
             
             <div class="caja">
-                <strong>1. DATOS DEL PEDIDO</strong><br>
-                <strong>Cliente:</strong> ${datos.clienteNombre} (${datos.clienteTelefono})<br>
+                <strong>1. DATOS DEL CLIENTE</strong><br>
+                <strong>Nombre:</strong> ${datos.clienteNombre}<br>
+                <strong>Teléfono:</strong> ${datos.clienteTelefono}<br>
                 <strong>Dirección:</strong> ${datos.clienteDireccion}
             </div>
 
             <div class="caja">
-                <strong>Detalle de los Productos / Paquete:</strong><br>
+                <strong>2. PRODUCTOS:</strong><br>
                 ${filasProductos}
             </div>
 
             <div class="grid">
                 <div class="bloque-calc">
-                    <div>Precio Productos/Paquete: <strong>${precioProductos.toLocaleString()} XAF</strong></div>
-                    <div>Comisión / coste de entrega: <strong>${costeEntregaZona.toLocaleString()} XAF</strong></div>
-                    <div>Comisión / coste de envío: <strong>${costeEnvioFijo.toLocaleString()} XAF</strong></div>
+                    <strong>DESGLOSE:</strong>
+                    <div>Subtotal Productos: <strong>${precioProductos.toLocaleString()} XAF</strong></div>
+                    <div>Coste de entrega: <strong>${costeEntregaZona.toLocaleString()} XAF</strong></div>
+                    <div>Coste de envío: <strong>${costeEnvioFijo.toLocaleString()} XAF</strong></div>
                 </div>
 
                 <div class="bloque-calc" style="background: #e8f5e9;">
+                    <strong>TOTALES:</strong>
                     <div>TOTAL A COBRAR: <strong>${totalCobrar.toLocaleString()} XAF</strong></div>
-                    <div>REEMBOLSO: <strong>${reembolsoVendedor.toLocaleString()} XAF</strong></div>
-                    <div>TOTAL COMISIÓN: <strong>${totalComision.toLocaleString()} XAF</strong></div>
+                    <div>REEMBOLSO VENDEDOR: <strong>${reembolsoVendedor.toLocaleString()} XAF</strong></div>
+                    <div>COMISIÓN FANGOO: <strong>${totalComision.toLocaleString()} XAF</strong></div>
                 </div>
             </div>
 
             <div class="firmas">
-                <div class="firma-box">Firma Vendedor</div>
+                <div class="firma-box">Firma Repartidor</div>
                 <div class="firma-box">Firma Cliente</div>
             </div>
+            <div class="footer">Gracias por comprar en Fangoo Market | Malabo, Guinea Ecuatorial</div>
         </body>
         </html>
-    `);
+    `;
+
+    ventana.document.write(htmlContenido);
     ventana.document.close();
 }
 
