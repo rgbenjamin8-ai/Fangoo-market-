@@ -317,7 +317,7 @@ function pedirWhatsApp() {
     const comisionEnvio = Number(document.getElementById('tipoZona').value);
     
     if(!nombre || !telefono || !direccion) return alert('Rellena tus datos de entrega');
-    // Dentro de function pedirWhatsApp()
+
 generarAlbaranProducto({
     clienteNombre: nombre,
     clienteTelefono: telefono,
@@ -388,17 +388,14 @@ function enviarPaqueteWhatsApp() {
     const desc = document.getElementById('descripcionPaquete').value;
 
     if(!remNombre || !remTelefono || !destNombre || !destTelefono || !tipo) return alert('Rellena los campos obligatorios');
-// Llamada ajustada con todos los campos del mensaje
+
 generarAlbaranPaquete({
     remNombre: remNombre,
     remTelefono: remTelefono,
     remDireccion: remDireccion,
     destNombre: destNombre,
     destTelefono: destTelefono,
-    destDireccion: destDireccion,
-    tipo: tipo,
-    desc: desc,
-    tarifa: "2,500 XAF"
+    destDireccion: destDireccion
 });
 
     let mensaje = `*📦 SOLICITUD ENVÍO PAQUETE - FANGOO*%0A%0A`;
@@ -447,38 +444,19 @@ function actualizarPuntosSeguimiento(punto) {
 
 function generarAlbaranPaquete(datos) {
     const ventana = window.open('', '_blank');
-    
-    if (!ventana) {
-        alert('Por favor, permite las ventanas emergentes en tu navegador.');
-        return;
-    }
-
     ventana.document.write(`
-        <!DOCTYPE html>
         <html>
         <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Albarán de Envío - Fangoo Express</title>
+            <title>Albarán de Envío - Fangoo</title>
             <style>
-                body { font-family: Arial, sans-serif; padding: 15px; font-size: 13px; color: #333; }
-                .btn-imprimir {
-                    display: block; width: 100%; padding: 12px; background: #00A651; color: white;
-                    text-align: center; font-weight: bold; border: none; border-radius: 6px;
-                    margin-bottom: 20px; font-size: 15px; cursor: pointer;
-                }
-                .titulo { color: #00A651; font-size: 16px; font-weight: bold; border-bottom: 2px solid #00A651; padding-bottom: 5px; }
-                .caja { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 5px; background: #fafafa; }
-                .firmas { display: flex; justify-content: space-between; margin-top: 30px; }
-                .firma-box { border-top: 1px solid #000; width: 45%; text-align: center; padding-top: 5px; }
-                @media print {
-                    .btn-imprimir { display: none; }
-                }
+                body { font-family: Arial, sans-serif; padding: 20px; font-size: 13px; }
+                .titulo { color: #00A651; font-size: 18px; font-weight: bold; border-bottom: 2px solid #00A651; padding-bottom: 5px; }
+                .caja { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 5px; }
+                .firmas { display: flex; justify-content: space-between; margin-top: 40px; }
+                .firma-box { border-top: 1px solid #000; width: 45%; text-align: center; paddingTop: 5px; }
             </style>
         </head>
         <body>
-            <button class="btn-imprimir" onclick="window.print()">📄 Guardar en PDF / Imprimir</button>
-
             <div class="titulo">FANGOO EXPRESS — GUÍA DE ENVÍO DE PAQUETE</div>
             <p><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</p>
             
@@ -486,21 +464,14 @@ function generarAlbaranPaquete(datos) {
                 <strong>1. REMITENTE (Quien envía):</strong><br>
                 Nombre: ${datos.remNombre}<br>
                 Teléfono: ${datos.remTelefono}<br>
-                Barrio / Dirección: ${datos.remDireccion}
+                Dirección: ${datos.remDireccion}
             </div>
 
             <div class="caja">
                 <strong>2. DESTINATARIO (Quien recibe):</strong><br>
                 Nombre: ${datos.destNombre}<br>
                 Teléfono: ${datos.destTelefono}<br>
-                Barrio / Dirección: ${datos.destDireccion}
-            </div>
-
-            <div class="caja">
-                <strong>3. DETALLES DEL PAQUETE:</strong><br>
-                Tipo: ${datos.tipo || 'Otro'}<br>
-                Descripción: ${datos.desc || 'Sin descripción'}<br>
-                <strong>Tarifa de Envío Paquete:</strong> ${datos.tarifa || '2,500 XAF'}
+                Dirección: ${datos.destDireccion}
             </div>
 
             <div class="firmas">
@@ -510,8 +481,8 @@ function generarAlbaranPaquete(datos) {
         </body>
         </html>
     `);
-
     ventana.document.close();
+    ventana.print();
 }
 
 function generarAlbaranProducto(datos) {
