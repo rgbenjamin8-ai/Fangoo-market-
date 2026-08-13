@@ -317,6 +317,14 @@ function pedirWhatsApp() {
     const comisionEnvio = Number(document.getElementById('tipoZona').value);
     
     if(!nombre || !telefono || !direccion) return alert('Rellena tus datos de entrega');
+    // Dentro de function pedirWhatsApp()
+generarAlbaranProducto({
+    clienteNombre: nombre,
+    clienteTelefono: telefono,
+    clienteDireccion: direccion,
+    comision: comisionEnvio,
+    carrito: carrito
+});
 
     const vendedores = {};
     carrito.forEach(p => {
@@ -380,6 +388,15 @@ function enviarPaqueteWhatsApp() {
     const desc = document.getElementById('descripcionPaquete').value;
 
     if(!remNombre || !remTelefono || !destNombre || !destTelefono || !tipo) return alert('Rellena los campos obligatorios');
+    // Dentro de function enviarPaqueteWhatsApp()
+generarAlbaranPaquete({
+    remNombre: remNombre,
+    remTelefono: remTelefono,
+    remDireccion: remDireccion,
+    destNombre: destNombre,
+    destTelefono: destTelefono,
+    destDireccion: destDireccion
+});
 
     let mensaje = `*📦 SOLICITUD ENVÍO PAQUETE - FANGOO*%0A%0A`;
     mensaje += `*REMITENTE*%0A👤 ${remNombre}%0A📱 ${remTelefono}%0A📍 ${remDireccion}%0A`;
@@ -423,6 +440,127 @@ function actualizarPuntosSeguimiento(punto) {
         progressLine.style.width = '70%';
         statusDetalle.innerHTML = '<strong>Punto 3: Entregado</strong><br>¡El pedido ha sido entregado con éxito al destinatario!';
     }
+}
+
+function generarAlbaranPaquete(datos) {
+    const ventana = window.open('', '_blank');
+    ventana.document.write(`
+        <html>
+        <head>
+            <title>Albarán de Envío - Fangoo</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; font-size: 13px; }
+                .titulo { color: #00A651; font-size: 18px; font-weight: bold; border-bottom: 2px solid #00A651; padding-bottom: 5px; }
+                .caja { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 5px; }
+                .firmas { display: flex; justify-content: space-between; margin-top: 40px; }
+                .firma-box { border-top: 1px solid #000; width: 45%; text-align: center; paddingTop: 5px; }
+            </style>
+        </head>
+        <body>
+            <div class="titulo">FANGOO EXPRESS — GUÍA DE ENVÍO DE PAQUETE</div>
+            <p><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</p>
+            
+            <div class="caja">
+                <strong>1. REMITENTE (Quien envía):</strong><br>
+                Nombre: ${datos.remNombre}<br>
+                Teléfono: ${datos.remTelefono}<br>
+                Dirección: ${datos.remDireccion}
+            </div>
+
+            <div class="caja">
+                <strong>2. DESTINATARIO (Quien recibe):</strong><br>
+                Nombre: ${datos.destNombre}<br>
+                Teléfono: ${datos.destTelefono}<br>
+                Dirección: ${datos.destDireccion}
+            </div>
+
+            <div class="firmas">
+                <div class="firma-box">Firma Remitente</div>
+                <div class="firma-box">Firma Destinatario</div>
+            </div>
+        </body>
+        </html>
+    `);
+    ventana.document.close();
+    ventana.print();
+}
+
+function generarAlbaranProducto(datos) {
+    const ventana = window.open('', '_blank');
+    
+    let filasProductos = '';
+    let precioProductos = 0;
+
+    datos.carrito.forEach(p => {
+        const nombre = p.producto || p.nombre || 'Producto';
+        const precio = Number(p.precio || 0);
+        precioProductos += precio;
+        filasProductos += `
+            <div>• ${nombre}: <strong>${precio.toLocaleString()} XAF</strong> (Vendedor: ${p.vendedor || 'Fangoo'})</div>
+        `;
+    });
+
+    const costeEnvioFijo = 500; // Descuento directo al vendedor
+    const costeEntregaZona = Number(datos.comision || 0); // 1000 o 1500 XAF según la zona
+    
+    // Fórmulas corregidas:
+    const reembolsoVendedor = precioProductos - costeEnvioFijo; // Solo se le restan los 500 XAF
+    const totalComision = costeEnvioFijo + costeEntregaZona; // 500 + comisión de entrega
+    const totalCobrar = precioProductos + costeEntregaZona; // Lo que paga el cliente en total
+
+    ventana.document.write(`
+        <html>
+        <head>
+            <title>Albarán de Productos - Fangoo Market</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; font-size: 13px; color: #333; }
+                .titulo { color: #00A651; font-size: 18px; font-weight: bold; border-bottom: 2px solid #00A651; padding-bottom: 5px; }
+                .caja { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 5px; background: #fafafa; }
+                .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+                .bloque-calc { border: 1px solid #00A651; padding: 10px; border-radius: 5px; margin-top: 10px; }
+                .firmas { display: flex; justify-content: space-between; margin-top: 40px; }
+                .firma-box { border-top: 1px solid #000; width: 45%; text-align: center; padding-top: 5px; }
+            </style>
+        </head>
+        <body>
+            <div class="titulo">FANGOO MARKET — ALBARÁN DE RECOGIDA Y ENTREGA</div>
+            <p><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</p>
+            
+            <div class="caja">
+                <strong>1. DATOS DEL PEDIDO</strong><br>
+                <strong>Cliente:</strong> ${datos.clienteNombre} (${datos.clienteTelefono})<br>
+                <strong>Dirección:</strong> ${datos.clienteDireccion}
+            </div>
+
+            <div class="caja">
+                <strong>Detalle de los Productos / Paquete:</strong><br>
+                ${filasProductos}
+            </div>
+
+            <div class="grid">
+                <div class="bloque-calc">
+                    <div>Precio Productos/Paquete: <strong>${precioProductos.toLocaleString()} XAF</strong></div>
+                    <div>Comisión / coste de entrega: <strong>${costeEntregaZona.toLocaleString()} XAF</strong></div>
+                    <div>Comisión / coste de envío: <strong>${costeEnvioFijo.toLocaleString()} XAF</strong></div>
+                </div>
+
+                <div class="bloque-calc" style="background: #e8f5e9;">
+                    <div>TOTAL A COBRAR: <strong>${totalCobrar.toLocaleString()} XAF</strong></div>
+                    <div>REEMBOLSO: <strong>${reembolsoVendedor.toLocaleString()} XAF</strong></div>
+                    <div>TOTAL COMISIÓN: <strong>${totalComision.toLocaleString()} XAF</strong></div>
+                </div>
+            </div>
+
+            <div class="firmas">
+                <div class="firma-box">Firma Vendedor</div>
+                <div class="firma-box">Firma Cliente</div>
+            </div>
+        </body>
+        </html>
+    `);
+
+    ventana.document.close();
+    ventana.print();
 }
 
 cargarProductos();
