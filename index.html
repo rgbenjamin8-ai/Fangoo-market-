@@ -308,7 +308,6 @@ function extraerTelefono(texto) {
     return match ? '240' + match[0] : WHATSAPP_FANGOO;
 }
 
-// PEDIDOS DE PRODUCTOS
 function pedirWhatsApp() {
     if(carrito.length === 0) return alert('Carrito vacío');
     const nombre = document.getElementById('clienteNombre').value;
@@ -318,6 +317,7 @@ function pedirWhatsApp() {
     
     if(!nombre || !telefono || !direccion) return alert('Rellena tus datos de entrega');
 
+    // 1. PRIMERO GENERAR EL ALBARÁN (Abre la pestaña del PDF)
     generarAlbaranProducto({
         clienteNombre: nombre,
         clienteTelefono: telefono,
@@ -326,6 +326,7 @@ function pedirWhatsApp() {
         carrito: carrito
     });
 
+    // 2. PREPARAR MENSAJES
     const vendedores = {};
     carrito.forEach(p => {
         const tel = extraerTelefono(p.vendedor);
@@ -334,43 +335,45 @@ function pedirWhatsApp() {
     });
 
     let subtotalProductos = 0;
-    let mensajeFangoo = `*📋 NUEVO PEDIDO - LOGÍSTICA FANGOO*%0A%0A`;
-    mensajeFangoo += `*CLIENTE*%0A👤 ${nombre}%0A📱 ${telefono}%0A📍 ${direccion}%0A`;
-    if(gpsCliente) mensajeFangoo += `🗺️ *GPS ENTREGA:* https://maps.google.com/?q=${gpsCliente}%0A`;
-    mensajeFangoo += `%0A*DETALLE COMPLETO DEL PEDIDO:*%0A`;
+    let mensajeFangoo = `*📋 NUEVO PEDIDO - LOGÍSTICA FANGOO*\n\n`;
+    mensajeFangoo += `*CLIENTE*\n👤 ${nombre}\n📱 ${telefono}\n📍 ${direccion}\n`;
+    if(gpsCliente) mensajeFangoo += `🗺️ *GPS ENTREGA:* https://maps.google.com/?q=${gpsCliente}\n`;
+    mensajeFangoo += `\n*DETALLE COMPLETO DEL PEDIDO:*\n`;
 
     Object.keys(vendedores).forEach(telVendedor => {
-        let mensajeVendedor = `*🔔 PEDIDO NUEVO FANGOO MARKET*%0A%0A`;
-        mensajeVendedor += `*CLIENTE*%0A👤 ${nombre}%0A*DIRECCION:*%0A📍 ${direccion}%0A`;
-        mensajeVendedor += `*PRODUCTO PEDIDO:*%0A`;
+        let mensajeVendedor = `*🔔 PEDIDO NUEVO FANGOO MARKET*\n\n`;
+        mensajeVendedor += `*CLIENTE*\n👤 ${nombre}\n*DIRECCION:*\n📍 ${direccion}\n`;
+        mensajeVendedor += `*PRODUCTO PEDIDO:*\n`;
         let totalVendedor = 0;
         
         vendedores[telVendedor].forEach(p => {
             const nom = p.producto || p.nombre;
             const prec = p.precio || 0;
-            mensajeVendedor += `📦 ${nom} - ${Number(prec).toLocaleString()} XAF%0A`;
+            mensajeVendedor += `📦 ${nom} - ${Number(prec).toLocaleString()} XAF\n`;
             totalVendedor += Number(prec);
-            mensajeFangoo += `📦 ${nom} - ${Number(prec).toLocaleString()} XAF%0A Vendedor: ${p.vendedor || 'Fangoo'}%0A Tel: ${telVendedor}%0A`;
+            mensajeFangoo += `📦 ${nom} - ${Number(prec).toLocaleString()} XAF\n Vendedor: ${p.vendedor || 'Fangoo'}\n Tel: ${telVendedor}\n`;
         });
         
         subtotalProductos += totalVendedor;
-        mensajeVendedor += `%0A*SUBTOTAL: ${totalVendedor.toLocaleString()} XAF*%0A%0A`;
+        mensajeVendedor += `\n*SUBTOTAL: ${totalVendedor.toLocaleString()} XAF*\n\n`;
         mensajeVendedor += `_El equipo de Fangoo llegará en 10-20 min para retirar el pedido. Confirma disponibilidad._`;
 
-        window.open(`https://wa.me/${telVendedor}?text=${mensajeVendedor}`, '_blank');
+        // Protocolo directo app
+        window.open(`whatsapp://send?phone=${telVendedor}&text=${encodeURIComponent(mensajeVendedor)}`, '_blank');
     });
 
     const totalFinal = subtotalProductos + comisionEnvio;
 
+    // 3. ABRIR WHATSAPP FANGOO TRAS UN BREVE TIEMPO
     setTimeout(() => {
-        mensajeFangoo += `%0A💵 *Subtotal Productos:* ${subtotalProductos.toLocaleString()} XAF%0A`;
-        mensajeFangoo += `🛵 *Comisión de Envío:* ${comisionEnvio.toLocaleString()} XAF%0A`;
-        mensajeFangoo += `💰 *TOTAL A COBRAR:* ${totalFinal.toLocaleString()} XAF%0A%0A`;
+        mensajeFangoo += `\n💵 *Subtotal Productos:* ${subtotalProductos.toLocaleString()} XAF\n`;
+        mensajeFangoo += `🛵 *Comisión de Envío:* ${comisionEnvio.toLocaleString()} XAF\n`;
+        mensajeFangoo += `💰 *TOTAL A COBRAR:* ${totalFinal.toLocaleString()} XAF\n\n`;
         mensajeFangoo += `_ACCIÓN: Coordinar recogida y entrega al cliente._`;
-        window.open(`https://wa.me/${WHATSAPP_FANGOO}?text=${mensajeFangoo}`, '_blank');
-    }, 1500);
+        
+        window.open(`whatsapp://send?phone=${WHATSAPP_FANGOO}&text=${encodeURIComponent(mensajeFangoo)}`, '_blank');
+    }, 2000);
 
-    alert('¡Pedido enviado! Redirigiendo a WhatsApp...');
     carrito = []; gpsCliente = null;
     document.getElementById('contador').innerText = 0;
     cerrarCarrito();
