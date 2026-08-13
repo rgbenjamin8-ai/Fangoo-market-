@@ -443,33 +443,39 @@ function actualizarPuntosSeguimiento(punto) {
 }
 
 function generarAlbaranPaquete(datos) {
-    // 1. Crear un marco de impresión invisible (compatible con móviles)
-    let iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
+    const ventana = window.open('', '_blank');
+    
+    if (!ventana) {
+        alert('Por favor, permite las ventanas emergentes en tu navegador para ver el albarán.');
+        return;
+    }
 
-    // 2. Escribir el contenido del albarán
-    let doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(`
+    ventana.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Albarán de Envío - Fangoo</title>
             <style>
-                body { font-family: Arial, sans-serif; padding: 20px; font-size: 13px; color: #333; }
-                .titulo { color: #00A651; font-size: 18px; font-weight: bold; border-bottom: 2px solid #00A651; padding-bottom: 5px; }
+                body { font-family: Arial, sans-serif; padding: 15px; font-size: 13px; color: #333; }
+                .btn-imprimir {
+                    display: block; width: 100%; padding: 12px; background: #00A651; color: white;
+                    text-align: center; font-weight: bold; border: none; border-radius: 6px;
+                    margin-bottom: 20px; font-size: 15px; cursor: pointer;
+                }
+                .titulo { color: #00A651; font-size: 16px; font-weight: bold; border-bottom: 2px solid #00A651; padding-bottom: 5px; }
                 .caja { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 5px; background: #fafafa; }
-                .firmas { display: flex; justify-content: space-between; margin-top: 40px; }
+                .firmas { display: flex; justify-content: space-between; margin-top: 30px; }
                 .firma-box { border-top: 1px solid #000; width: 45%; text-align: center; padding-top: 5px; }
+                @media print {
+                    .btn-imprimir { display: none; }
+                }
             </style>
         </head>
         <body>
+            <button class="btn-imprimir" onclick="window.print()">📄 Guardar en PDF / Imprimir</button>
+
             <div class="titulo">FANGOO EXPRESS — GUÍA DE ENVÍO DE PAQUETE</div>
             <p><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</p>
             
@@ -500,14 +506,8 @@ function generarAlbaranPaquete(datos) {
         </body>
         </html>
     `);
-    doc.close();
 
-    // 3. Dar medio segundo de espera para que Android cargue el diseño antes de abrir el visor PDF
-    setTimeout(() => {
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
-        setTimeout(() => document.body.removeChild(iframe), 2000);
-    }, 500);
+    ventana.document.close();
 }
 
 function generarAlbaranProducto(datos) {
