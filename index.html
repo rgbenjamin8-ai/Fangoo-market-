@@ -333,8 +333,8 @@ function pedirWhatsApp() {
 
     Object.keys(vendedores).forEach(telVendedor => {
         let mensajeVendedor = `*🔔 PEDIDO NUEVO FANGOO MARKET*%0A%0A`;
-        mensajeVendedor += `*CLIENTE*%0A👤 ${nombre}%0A📍*DIRECCION ${direccion}%0A%0A`;
-        mensajeVendedor += `*PEDIDO:*%0A`;
+        mensajeVendedor += `*CLIENTE*%0A👤 ${nombre}%0A*DIRECCION:*%0A📍 ${direccion}%0A`;
+        mensajeVendedor += `*PRODUCTO PEDIDO:*%0A`;
         let totalVendedor = 0;
         
         vendedores[telVendedor].forEach(p => {
