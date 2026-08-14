@@ -179,7 +179,6 @@ let carrito = [];
 let gpsCliente = null;
 let gpsRemitente = null;
 
-// ===== FUNCIONES AUXILIARES - PEGAR ARRIBA DE TODO =====
 function obtenerSiguienteNumAlbaran(tipo) {
     const key = `ultimoAlbaran_${tipo}`;
     let ultimoNum = localStorage.getItem(key) || 0;
@@ -647,7 +646,7 @@ function enviarPaqueteWhatsApp() {
     mensaje += `🛵 *Tarifa de Envío Paquete:* 2,500 XAF%0A%0A`;
     mensaje += `_El repartidor de Fangoo llegará en 10-20 min para retirar el paquete._`;
 
-    window.open(`whatsapp://send?phone=${WHATSAPP_FANGOO}&text=${mensaje}`, '_blank');
+    window.open(`whatsapp://wa.me/&text=${mensaje}`, '_blank');
     gpsRemitente = null;
     cerrarEnvio();
 }
