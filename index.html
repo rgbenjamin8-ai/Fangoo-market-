@@ -179,6 +179,37 @@ let carrito = [];
 let gpsCliente = null;
 let gpsRemitente = null;
 
+// ===== FUNCIONES AUXILIARES - PEGAR ARRIBA DE TODO =====
+function obtenerSiguienteNumAlbaran(tipo) {
+    const key = `ultimoAlbaran_${tipo}`;
+    let ultimoNum = localStorage.getItem(key) || 0;
+    ultimoNum = parseInt(ultimoNum) + 1;
+    localStorage.setItem(key, ultimoNum);
+    return tipo + '-' + ultimoNum.toString().padStart(5, '0');
+}
+
+function escapeHTML(texto) {
+    if (!texto) return '';
+    return String(texto).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+// ESTA FUNCIÓN ARREGLA LA PANTALLA NEGRA EN MÓVIL/WHATSAPP
+function abrirAlbaranHTML(htmlContenido, nombreArchivo) {
+    const blob = new Blob([htmlContenido], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const ventana = window.open(url, '_blank');
+    if (!ventana || ventana.closed || typeof ventana.closed == 'undefined') {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = nombreArchivo + '.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        alert('Pop-ups bloqueados. Se descargó el albarán. Ábrelo y dale a "Imprimir > Guardar como PDF"');
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
 // GESTIÓN DE MODALES
 function abrirCarrito() {
     cerrarEnvio();
@@ -308,12 +339,15 @@ function extraerTelefono(texto) {
     return match? '240' + match[0] : WHATSAPP_FANGOO;
 }
 
-// FUNCIÓN 1: ALBARÁN DE PAQUETES
+// ===== ALBARÁN PAQUETE ARREGLADO =====
 function generarAlbaranPaquete(datos) {
-    const ventana = window.open('', '_blank');
-    if (!ventana) return alert('Por favor, permite las ventanas emergentes.');
+    if (!datos.remNombre ||!datos.destNombre) {
+        return alert('Faltan datos del remitente o destinatario');
+    }
 
-    const numAlbaran = String(Math.floor(Math.random() * 900000) + 100000).padStart(6, '0');
+    const numAlbaran = obtenerSiguienteNumAlbaran('FP');
+    const fecha = new Date().toLocaleDateString('es-GQ', { day: '2-digit', month: 'long', year: 'numeric' });
+    const nombreRepartidor = escapeHTML(datos.repartidor) || '___________________';
 
     const htmlContenido = `
         <!DOCTYPE html>
@@ -321,93 +355,81 @@ function generarAlbaranPaquete(datos) {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Albarán #${numAlbaran} - Fangoo Express</title>
+            <title>Albarán ${numAlbaran} - Fangoo Express</title>
             <style>
-                body { font-family: Arial, sans-serif; padding: 15px; font-size: 13px; color: #333; }
-                .btn-imprimir {
-                    display: block; width: 100%; padding: 12px; background: #00A651; color: white;
-                    text-align: center; font-weight: bold; border: none; border-radius: 6px;
-                    margin-bottom: 20px; font-size: 15px; cursor: pointer;
-                }
-                .header-flex { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #00A651; padding-bottom: 5px; }
-                .titulo { color: #00A651; font-size: 16px; font-weight: bold; }
-                .num-albaran { font-size: 16px; font-weight: bold; color: #000; }
-                .caja { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 5px; background: #fafafa; }
-                .subtitulo { color: #000; font-size: 13px; font-weight: bold; margin-bottom: 5px; display: block; }
-                .firmas { display: flex; justify-content: space-between; margin-top: 30px; }
-                .firma-box { border-top: 1px solid #000; width: 45%; text-align: center; padding-top: 5px; color: #000; font-weight: bold; }
-                @media print { .btn-imprimir { display: none; } }
+                body { font-family: Arial, sans-serif; padding: 15px; font-size: 13px; color: #000; max-width: 600px; margin: 0 auto; }
+               .btn-imprimir { display: block; width: 100%; padding: 12px; background: #00A651; color: white; text-align: center; font-weight: bold; border: none; border-radius: 6px; margin-bottom: 20px; font-size: 15px; cursor: pointer; }
+               .titulo { color: #00A651; font-size: 18px; font-weight: bold; border-bottom: 2px solid #00A651; padding-bottom: 5px; text-align: center; }
+               .num-albaran { text-align: center; font-weight: bold; margin: 10px 0; color: #000; }
+               .caja { border: 1px solid #00A651; padding: 10px; margin: 10px 0; border-radius: 5px; background: #fafafa; color: #000; }
+               .caja strong { color: #000; }
+               .firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 50px; }
+               .firma-box { border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 12px; color: #000; }
+               .repartidor-linea { text-align: center; margin-top: 25px; font-size: 13px; color: #000; }
+               .footer { text-align: center; font-size: 11px; margin-top: 20px; color: #000; }
+                @media print {.btn-imprimir { display: none; } body { padding: 0; } }
             </style>
         </head>
         <body>
             <button class="btn-imprimir" onclick="window.print()">📄 Guardar en PDF / Imprimir</button>
-
-            <div class="header-flex">
-                <div class="titulo">FANGOO EXPRESS — GUÍA DE ENVÍO DE PAQUETE</div>
-                <div class="num-albaran">Nº: ${numAlbaran}</div>
-            </div>
-            <p><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</p>
-            
+            <div class="titulo">FANGOO EXPRESS — GUÍA DE ENVÍO</div>
+            <div class="num-albaran">Nº Albarán: ${numAlbaran} | Fecha: ${fecha}</div>
             <div class="caja">
-                <span class="subtitulo">1. REMITENTE (Quien envía)</span>
-                Nombre: ${datos.remNombre}<br>
-                Teléfono: ${datos.remTelefono}<br>
-                Dirección: ${datos.remDireccion}
+                <strong>1. REMITENTE (Quien envía):</strong><br>
+                Nombre: ${escapeHTML(datos.remNombre)}<br>
+                Teléfono: ${escapeHTML(datos.remTelefono)}<br>
+                Dirección: ${escapeHTML(datos.remDireccion)}
             </div>
-
             <div class="caja">
-                <span class="subtitulo">2. DESTINATARIO (Quien recibe)</span>
-                Nombre: ${datos.destNombre}<br>
-                Teléfono: ${datos.destTelefono}<br>
-                Dirección: ${datos.destDireccion}
+                <strong>2. DESTINATARIO (Quien recibe):</strong><br>
+                Nombre: ${escapeHTML(datos.destNombre)}<br>
+                Teléfono: ${escapeHTML(datos.destTelefono)}<br>
+                Dirección: ${escapeHTML(datos.destDireccion)}
             </div>
-
             <div class="caja">
-                <span class="subtitulo">3. DETALLES DEL PAQUETE</span>
-                Tipo: ${datos.tipo || 'Otro'}<br>
-                Descripción: ${datos.desc || 'Sin descripción'}<br>
-                <strong>Tarifa de Envío Paquete:</strong> 2,500 XAF
+                <strong>3. DETALLES DEL PAQUETE:</strong><br>
+                Tipo: ${escapeHTML(datos.tipo) || 'Otro'}<br>
+                Descripción: ${escapeHTML(datos.desc) || 'Sin descripción'}<br>
+                <strong>Tarifa de Envío:</strong> 2,500 XAF
             </div>
-
             <div class="firmas">
-                <div class="firma-box">Firma Remitente</div>
-                <div class="firma-box">Firma Destinatario</div>
+                <div class="firma-box">Firma Remitente<br>${escapeHTML(datos.remNombre)}</div>
+                <div class="firma-box">Firma Destinatario<br>${escapeHTML(datos.destNombre)}</div>
             </div>
+            <div class="repartidor-linea"><strong>Nombre del Repartidor:</strong> ${nombreRepartidor}</div>
+            <div class="footer">Gracias por usar Fangoo Express | Malabo, Guinea Ecuatorial</div>
         </body>
         </html>
     `;
 
-    ventana.document.write(htmlContenido);
-    ventana.document.close();
+    abrirAlbaranHTML(htmlContenido, `Albaran-${numAlbaran}`);
 }
 
-
-// FUNCIÓN 2: ALBARÁN DE PRODUCTOS (CON RECIBO VENDEDOR INCLUIDO)
 function generarAlbaranProducto(datos) {
-    const ventana = window.open('', '_blank');
-    if (!ventana) return alert('Por favor, permite las ventanas emergentes.');
-    
-    // Generador de número de albarán a 6 dígitos (000001 - 999999)
-    const numAlbaran = String(Math.floor(Math.random() * 900000) + 100000).padStart(6, '0');
+    if (!datos.carrito || datos.carrito.length === 0) {
+        return alert('El carrito está vacío');
+    }
 
     let filasProductos = '';
     let precioProductos = 0;
 
-    if (datos.carrito && Array.isArray(datos.carrito)) {
-        datos.carrito.forEach(p => {
-            const nombre = p.producto || p.nombre || 'Producto';
-            const precio = Number(p.precio || 0);
-            precioProductos += precio;
-            filasProductos += `<div>• ${nombre}: <strong>${precio.toLocaleString()} XAF</strong> (Vendedor: ${p.vendedor || 'Fangoo'})</div>`;
-        });
-    }
+    datos.carrito.forEach(p => {
+        const nombre = escapeHTML(p.producto || p.nombre || 'Producto');
+        const precio = Number(p.precio || 0);
+        const vendedor = escapeHTML(p.vendedor || 'Fangoo');
+        precioProductos += precio;
+        filasProductos += `<div>• ${nombre}: <strong>${precio.toLocaleString()} XAF</strong> - Vendedor: ${vendedor}</div>`;
+    });
 
     const costeEnvioFijo = 500;
     const costeEntregaZona = Number(datos.comision || 0);
-    
     const reembolsoVendedor = precioProductos - costeEnvioFijo;
     const totalComision = costeEnvioFijo + costeEntregaZona;
     const totalCobrar = precioProductos + costeEntregaZona;
+    const numAlbaran = obtenerSiguienteNumAlbaran('FM');
+    const fecha = new Date().toLocaleDateString('es-GQ', { day: '2-digit', month: 'long', year: 'numeric' });
+    const nombreRepartidor = escapeHTML(datos.repartidor) || '___________________';
+    const nombreVendedor = escapeHTML(datos.carrito[0]?.vendedor || 'Fangoo');
 
     const htmlContenido = `
         <!DOCTYPE html>
@@ -415,90 +437,230 @@ function generarAlbaranProducto(datos) {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Albarán #${numAlbaran} - Fangoo Market</title>
+            <title>Albarán ${numAlbaran} - Fangoo Market</title>
             <style>
-                body { font-family: Arial, sans-serif; padding: 15px; font-size: 13px; color: #333; }
-                .btn-imprimir {
-                    display: block; width: 100%; padding: 12px; background: #00A651; color: white;
-                    text-align: center; font-weight: bold; border: none; border-radius: 6px;
-                    margin-bottom: 20px; font-size: 15px; cursor: pointer;
-                }
-                .header-flex { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #00A651; padding-bottom: 5px; }
-                .titulo { color: #00A651; font-size: 16px; font-weight: bold; }
-                .num-albaran { font-size: 16px; font-weight: bold; color: #000; }
-                .subtitulo { color: #000; font-size: 13px; font-weight: bold; margin-bottom: 5px; display: block; }
-                .caja { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 5px; background: #fafafa; }
-                .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-                .bloque-calc { border: 1px solid #00A651; padding: 10px; border-radius: 5px; margin-top: 10px; }
-                .firmas { display: flex; justify-content: space-between; margin-top: 25px; }
-                .firma-box { border-top: 1px solid #000; width: 45%; text-align: center; padding-top: 5px; color: #000; font-weight: bold; }
-                
-                /* RECIBO SEPARADO VENDEDOR */
-                .corte-recibo { border-top: 2px dashed #666; margin-top: 35px; padding-top: 15px; }
-                .titulo-recibo { color: #000; font-size: 14px; font-weight: bold; text-align: center; text-transform: uppercase; margin-bottom: 10px; }
-                .firma-recibo { border-top: 1px solid #000; width: 60%; margin: 30px auto 0 auto; text-align: center; padding-top: 5px; color: #000; font-weight: bold; }
-
-                @media print { .btn-imprimir { display: none; } }
+                body { font-family: Arial, sans-serif; padding: 15px; font-size: 13px; color: #000; max-width: 600px; margin: 0 auto; }
+               .btn-imprimir { display: block; width: 100%; padding: 12px; background: #00A651; color: white; text-align: center; font-weight: bold; border: none; border-radius: 6px; margin-bottom: 20px; font-size: 15px; cursor: pointer; }
+               .titulo { color: #00A651; font-size: 18px; font-weight: bold; border-bottom: 2px solid #00A651; padding-bottom: 5px; text-align: center; }
+               .num-albaran { text-align: center; font-weight: bold; margin: 10px 0; color: #000; }
+               .caja { border: 1px solid #00A651; padding: 10px; margin: 10px 0; border-radius: 5px; background: #fafafa; color: #000; }
+               .caja strong { color: #000; }
+               .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+               .bloque-calc { border: 1px solid #00A651; padding: 10px; border-radius: 5px; margin-top: 10px; color: #000; }
+               .bloque-calc div { margin: 3px 0; }
+               .bloque-calc strong { color: #000; }
+               .firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 50px; }
+               .firma-box { border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 12px; color: #000; }
+               .repartidor-linea { text-align: center; margin-top: 25px; font-size: 13px; color: #000; }
+               .footer { text-align: center; font-size: 11px; margin-top: 20px; color: #000; }
+                @media print {.btn-imprimir { display: none; } body { padding: 0; } }
             </style>
         </head>
         <body>
             <button class="btn-imprimir" onclick="window.print()">📄 Guardar en PDF / Imprimir</button>
-
-            <!-- PARTE 1: ALBARÁN PRINCIPAL -->
-            <div class="header-flex">
-                <div class="titulo">FANGOO MARKET — ALBARÁN DE RECOGIDA Y ENTREGA</div>
-                <div class="num-albaran">Nº: ${numAlbaran}</div>
-            </div>
-            <p><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</p>
-            
+            <div class="titulo">FANGOO MARKET — ALBARÁN DE ENTREGA</div>
+            <div class="num-albaran">Nº Albarán: ${numAlbaran} | Fecha: ${fecha}</div>
             <div class="caja">
-                <span class="subtitulo">1. DATOS DEL PEDIDO</span>
-                <strong>Cliente:</strong> ${datos.clienteNombre} (${datos.clienteTelefono})<br>
-                <strong>Dirección:</strong> ${datos.clienteDireccion}
+                <strong>1. DATOS DEL CLIENTE</strong><br>
+                <strong>Nombre:</strong> ${escapeHTML(datos.clienteNombre)}<br>
+                <strong>Teléfono:</strong> ${escapeHTML(datos.clienteTelefono)}<br>
+                <strong>Dirección:</strong> ${escapeHTML(datos.clienteDireccion)}
             </div>
-
             <div class="caja">
-                <span class="subtitulo">2. DETALLE DE LOS PRODUCTOS / PAQUETE</span>
+                <strong>2. PRODUCTOS:</strong><br>
                 ${filasProductos}
             </div>
-
             <div class="grid">
                 <div class="bloque-calc">
-                    <div>Precio Productos/Paquete: <strong>${precioProductos.toLocaleString()} XAF</strong></div>
-                    <div>Comisión / coste de entrega: <strong>${costeEntregaZona.toLocaleString()} XAF</strong></div>
-                    <div>Comisión / coste de envío: <strong>${costeEnvioFijo.toLocaleString()} XAF</strong></div>
+                    <strong>DESGLOSE:</strong>
+                    <div>Subtotal Productos: <strong>${precioProductos.toLocaleString()} XAF</strong></div>
+                    <div>Coste de entrega: <strong>${costeEntregaZona.toLocaleString()} XAF</strong></div>
+                    <div>Coste de envío: <strong>${costeEnvioFijo.toLocaleString()} XAF</strong></div>
                 </div>
-
-                <div class="bloque-calc" style="background: #e8f5e9;">
+                <div class="bloque-calc">
+                    <strong>TOTALES:</strong>
                     <div>TOTAL A COBRAR: <strong>${totalCobrar.toLocaleString()} XAF</strong></div>
                     <div>REEMBOLSO VENDEDOR: <strong>${reembolsoVendedor.toLocaleString()} XAF</strong></div>
-                    <div>TOTAL COMISIÓN FANGOO: <strong>${totalComision.toLocaleString()} XAF</strong></div>
+                    <div>COMISIÓN FANGOO: <strong>${totalComision.toLocaleString()} XAF</strong></div>
                 </div>
             </div>
-
             <div class="firmas">
-                <div class="firma-box">Firma Vendedor</div>
-                <div class="firma-box">Firma Cliente</div>
+                <div class="firma-box">Firma Vendedor<br>${nombreVendedor}</div>
+                <div class="firma-box">Firma Cliente<br>${escapeHTML(datos.clienteNombre)}</div>
             </div>
-
-            <!-- PARTE 2: RECIBO VENDEDOR -->
-            <div class="corte-recibo">
-                <div class="titulo-recibo">🧾 RECIBO DE PAGO AL VENDEDOR (Nº ${numAlbaran})</div>
-                <div class="caja">
-                    <strong>Fecha:</strong> ${new Date().toLocaleDateString()}<br>
-                    <strong>Monto de Reembolso Recibido:</strong> <span style="font-size:15px; color:#00A651; font-weight:bold;">${reembolsoVendedor.toLocaleString()} XAF</span><br>
-                    <strong>Concepto:</strong> Pago por entrega de productos del Albarán Nº ${numAlbaran}
-                </div>
-                <div class="firma-recibo">Firma Vendedor (Conforme al recibir el dinero)</div>
-            </div>
+            <div class="repartidor-linea"><strong>Nombre del Repartidor:</strong> ${nombreRepartidor}</div>
+            <div class="footer">Gracias por comprar en Fangoo Market | Malabo, Guinea Ecuatorial</div>
         </body>
         </html>
     `;
 
-    ventana.document.write(htmlContenido);
-    ventana.document.close();
+    abrirAlbaranHTML(htmlContenido, `Albaran-${numAlbaran}`);
 }
 
+function pedirWhatsApp() {
+    if (!carrito || carrito.length === 0) {
+        return alert('⚠️ El carrito está vacío.');
+    }
+
+const datosParaPDF = {
+    numAlbaran: obtenerSiguienteNumAlbaran('FM'),
+    fecha: new Date().toLocaleString('es-GQ'),
+    clienteNombre: nombre,
+    clienteTelefono: telefono,
+    clienteDireccion: direccion,
+    comision: comisionEnvio,
+    carrito: carrito,
+    subtotal: subtotalProductos,
+    total: subtotalProductos + comisionEnvio
+};
+
+fetch('https://script.google.com/macros/s/AKfycbwa9Mg3_IXY2dix7oRASUW44SH495LWdD6juOsWwPuUqYm17KSz0mTwefPSeuVrScKQXw', {
+    method: 'POST',
+    body: JSON.stringify(datosParaPDF)
+});
+    const inputNombre = document.getElementById('clienteNombre');
+    const inputTelefono = document.getElementById('clienteTelefono');
+    const inputDireccion = document.getElementById('clienteDireccion');
+    const inputZona = document.getElementById('tipoZona');
+
+    if (!inputNombre ||!inputTelefono ||!inputDireccion ||!inputZona) {
+        return alert('❌ Error: Uno de los campos del formulario no existe o tiene el ID cambiado.');
+    }
+
+    const nombre = inputNombre.value.trim();
+    const telefono = inputTelefono.value.trim();
+    const direccion = inputDireccion.value.trim();
+    const comisionEnvio = Number(inputZona.value || 1000);
+
+    if (!nombre ||!telefono ||!direccion) {
+        return alert('⚠️ Por favor, completa los campos de nombre, teléfono y dirección.');
+    }
+
+    generarAlbaranProducto({
+        clienteNombre: nombre,
+        clienteTelefono: telefono,
+        clienteDireccion: direccion,
+        comision: comisionEnvio,
+        carrito: carrito
+    });
+
+    const vendedores = {};
+    carrito.forEach(p => {
+        const tel = extraerTelefono(p.vendedor);
+        if(!vendedores[tel]) vendedores[tel] = [];
+        vendedores[tel].push(p);
+    });
+
+    let subtotalProductos = 0;
+    let mensajeFangoo = `*📋 NUEVO PEDIDO - LOGÍSTICA FANGOO*\n\n`;
+    mensajeFangoo += `*CLIENTE*\n👤 ${nombre}\n📱 ${telefono}\n📍 ${direccion}\n`;
+    if(gpsCliente) mensajeFangoo += `🗺️ *GPS ENTREGA:* https://maps.google.com/?q=${gpsCliente}\n`;
+    mensajeFangoo += `\n*DETALLE COMPLETO DEL PEDIDO:*\n`;
+
+    Object.keys(vendedores).forEach(telVendedor => {
+        let mensajeVendedor = `*🔔 PEDIDO NUEVO FANGOO MARKET*\n\n`;
+        mensajeVendedor += `*CLIENTE*\n👤 ${nombre}\n*DIRECCION:*\n📍 ${direccion}\n`;
+        mensajeVendedor += `*PRODUCTO PEDIDO:*\n`;
+        let totalVendedor = 0;
+
+        vendedores[telVendedor].forEach(p => {
+            const nom = p.producto || p.nombre;
+            const prec = p.precio || 0;
+            mensajeVendedor += `📦 ${nom} - ${Number(prec).toLocaleString()} XAF\n`;
+            totalVendedor += Number(prec);
+            mensajeFangoo += `📦 ${nom} - ${Number(prec).toLocaleString()} XAF\n Vendedor: ${p.vendedor || 'Fangoo'}\n Tel: ${telVendedor}\n`;
+        });
+
+        subtotalProductos += totalVendedor;
+        mensajeVendedor += `\n*SUBTOTAL: ${totalVendedor.toLocaleString()} XAF*\n\n`;
+        mensajeVendedor += `_El equipo de Fangoo llegará en 10-20 min para retirar el pedido. Confirma disponibilidad._`;
+
+        window.open(`whatsapp://send?phone=${telVendedor}&text=${encodeURIComponent(mensajeVendedor)}`, '_blank');
+    });
+
+    const totalFinal = subtotalProductos + comisionEnvio;
+
+    setTimeout(() => {
+        mensajeFangoo += `\n💵 *Subtotal Productos:* ${subtotalProductos.toLocaleString()} XAF\n`;
+        mensajeFangoo += `🛵 *Comisión de Envío:* ${comisionEnvio.toLocaleString()} XAF\n`;
+        mensajeFangoo += `💰 *TOTAL A COBRAR:* ${totalFinal.toLocaleString()} XAF\n\n`;
+        mensajeFangoo += `_ACCIÓN: Coordinar recogida y entrega al cliente._`;
+
+        window.open(`whatsapp://send?phone=${WHATSAPP_FANGOO}&text=${encodeURIComponent(mensajeFangoo)}`, '_blank');
+    }, 2000);
+
+    carrito = [];
+    gpsCliente = null;
+    document.getElementById('contador').innerText = 0;
+    cerrarCarrito();
+}
+
+function enviarPaqueteWhatsApp() {
+    const remNombre = document.getElementById('remNombre').value.trim();
+    const remTelefono = document.getElementById('remTelefono').value.trim();
+    const remDireccion = document.getElementById('remDireccion').value.trim();
+    const destNombre = document.getElementById('destNombre').value.trim();
+    const destTelefono = document.getElementById('destTelefono').value.trim();
+    const destDireccion = document.getElementById('destDireccion').value.trim();
+    const tipo = document.getElementById('tipoPaquete').value;
+    const desc = document.getElementById('descripcionPaquete').value.trim();
+
+    if(!remNombre ||!remTelefono ||!destNombre ||!destTelefono ||!tipo) {
+        return alert('⚠️ Rellena los campos obligatorios: remitente, destinatario y tipo de paquete.');
+    }
+
+    generarAlbaranPaquete({
+        remNombre: remNombre,
+        remTelefono: remTelefono,
+        remDireccion: remDireccion,
+        destNombre: destNombre,
+        destTelefono: destTelefono,
+        destDireccion: destDireccion,
+        tipo: tipo,
+        desc: desc
+    });
+
+    let mensaje = `*📦 SOLICITUD ENVÍO PAQUETE - FANGOO*%0A%0A`;
+    mensaje += `*REMITENTE*%0A👤 ${remNombre}%0A📱 ${remTelefono}%0A📍 ${remDireccion}%0A`;
+    if(gpsRemitente) mensaje += `🗺️ GPS: https://maps.google.com/?q=${gpsRemitente}%0A`;
+    mensaje += `%0A*DESTINATARIO*%0A👤 ${destNombre}%0A📱 ${destTelefono}%0A📍 ${destDireccion}%0A%0A`;
+    mensaje += `*PAQUETE*%0A📦 Tipo: ${tipo}%0A📝 Descripción: ${desc || 'Sin descripción'}%0A`;
+    mensaje += `🛵 *Tarifa de Envío Paquete:* 2,500 XAF%0A%0A`;
+    mensaje += `_El repartidor de Fangoo llegará en 10-20 min para retirar el paquete._`;
+
+    window.open(`whatsapp://send?phone=${WHATSAPP_FANGOO}&text=${mensaje}`, '_blank');
+    gpsRemitente = null;
+    cerrarEnvio();
+}
+
+function actualizarPuntosSeguimiento(punto) {
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const step3 = document.getElementById('step3');
+    const progressLine = document.getElementById('progressLine');
+    const statusDetalle = document.getElementById('statusDetalle');
+
+    step1.classList.remove('active');
+    step2.classList.remove('active');
+    step3.classList.remove('active');
+
+    if(punto === 1) {
+        step1.classList.add('active');
+        progressLine.style.width = '0%';
+        statusDetalle.innerHTML = '<strong>Punto 1: Solicitado</strong><br>Tu pedido/envío se ha registrado en WhatsApp. Esperando asignación de repartidor.';
+    } else if(punto === 2) {
+        step1.classList.add('active');
+        step2.classList.add('active');
+        progressLine.style.width = '35%';
+        statusDetalle.innerHTML = '<strong>Punto 2: En Camino</strong><br>El repartidor de Fangoo está recogiendo el paquete/producto para llevarlo a su destino.';
+    } else if(punto === 3) {
+        step1.classList.add('active');
+        step2.classList.add('active');
+        step3.classList.add('active');
+        progressLine.style.width = '70%';
+        statusDetalle.innerHTML = '<strong>Punto 3: Entregado</strong><br>¡El pedido ha sido entregado con éxito al destinatario!';
+    }
+}
 cargarProductos();
 </script>
 </body>
