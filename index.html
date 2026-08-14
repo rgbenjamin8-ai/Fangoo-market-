@@ -497,27 +497,13 @@ function generarAlbaranProducto(datos) {
     abrirAlbaranHTML(htmlContenido, `Albaran-${numAlbaran}`);
 }
 
-function pedirWhatsApp() {
+async function pedirWhatsApp() {
+    console.log('1. Botón pulsado');
+    
     if (!carrito || carrito.length === 0) {
         return alert('⚠️ El carrito está vacío.');
     }
 
-const datosParaPDF = {
-    numAlbaran: obtenerSiguienteNumAlbaran('FM'),
-    fecha: new Date().toLocaleString('es-GQ'),
-    clienteNombre: nombre,
-    clienteTelefono: telefono,
-    clienteDireccion: direccion,
-    comision: comisionEnvio,
-    carrito: carrito,
-    subtotal: subtotalProductos,
-    total: subtotalProductos + comisionEnvio
-};
-
-fetch('https://script.google.com/macros/s/AKfycbzAv4X2zaUl33mBQLC2Q6fm2Mk243rD7PzjcuVGc-hfXBcNfbmZefDO_bMpIZV3mAOwng/exec', {
-    method: 'POST',
-    body: JSON.stringify(datosParaPDF)
-});
     const inputNombre = document.getElementById('clienteNombre');
     const inputTelefono = document.getElementById('clienteTelefono');
     const inputDireccion = document.getElementById('clienteDireccion');
@@ -536,6 +522,13 @@ fetch('https://script.google.com/macros/s/AKfycbzAv4X2zaUl33mBQLC2Q6fm2Mk243rD7P
         return alert('⚠️ Por favor, completa los campos de nombre, teléfono y dirección.');
     }
 
+    console.log('2. Datos validados:', nombre);
+
+    const numAlbaran = obtenerSiguienteNumAlbaran('FM');
+    let subtotalProductos = carrito.reduce((sum, p) => sum + Number(p.precio || 0), 0);
+    const totalFinal = subtotalProductos + comisionEnvio;
+    const reembolsoVendedor = subtotalProductos - 500;
+
     generarAlbaranProducto({
         clienteNombre: nombre,
         clienteTelefono: telefono,
@@ -544,6 +537,37 @@ fetch('https://script.google.com/macros/s/AKfycbzAv4X2zaUl33mBQLC2Q6fm2Mk243rD7P
         carrito: carrito
     });
 
+    console.log('3. Albarán generado para cliente');
+
+    const datosParaServidor = {
+        numAlbaran: numAlbaran,
+        fecha: new Date().toLocaleString('es-GQ'),
+        clienteNombre: nombre,
+        clienteTelefono: telefono,
+        clienteDireccion: direccion,
+        gpsCliente: gpsCliente,
+        comisionEnvio: comisionEnvio,
+        subtotal: subtotalProductos,
+        total: totalFinal,
+        reembolso: reembolsoVendedor,
+        carrito: carrito
+    };
+
+    try {
+        console.log('4. Enviando a Google Script...');
+        // PEGA TU URL AQUÍ ABAJO
+        await fetch('https://script.google.com/macros/s/AKfycbwFUqe4kjv9s3yP7WZkLy8-UP7TMT7ImvvPlOgRgEvvROkg84COpJOnHjuHRdHzRzbS3g/exec', {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify(datosParaServidor)
+        });
+        console.log('5. Datos enviados a Google sin errores');
+    } catch (error) {
+        console.error('ERROR ENVIANDO A GOOGLE:', error);
+        alert('Error al enviar a servidor. Revisa la consola F12');
+    }
+
+    // El resto del código WhatsApp sigue igual...
     const vendedores = {};
     carrito.forEach(p => {
         const tel = extraerTelefono(p.vendedor);
@@ -551,11 +575,10 @@ fetch('https://script.google.com/macros/s/AKfycbzAv4X2zaUl33mBQLC2Q6fm2Mk243rD7P
         vendedores[tel].push(p);
     });
 
-    let subtotalProductos = 0;
     let mensajeFangoo = `*📋 NUEVO PEDIDO - LOGÍSTICA FANGOO*\n\n`;
     mensajeFangoo += `*CLIENTE*\n👤 ${nombre}\n📱 ${telefono}\n📍 ${direccion}\n`;
-    if(gpsCliente) mensajeFangoo += `🗺️ *GPS ENTREGA:* https://maps.google.com/?q=${gpsCliente}\n`;
-    mensajeFangoo += `\n*DETALLE COMPLETO DEL PEDIDO:*\n`;
+    if(gpsCliente) mensajeFangoo += `🗺️ *GPS:* https://maps.google.com/?q=${gpsCliente}\n`;
+    mensajeFangoo += `\n*DETALLE:*\n`;
 
     Object.keys(vendedores).forEach(telVendedor => {
         let mensajeVendedor = `*🔔 PEDIDO NUEVO FANGOO MARKET*\n\n`;
@@ -568,24 +591,20 @@ fetch('https://script.google.com/macros/s/AKfycbzAv4X2zaUl33mBQLC2Q6fm2Mk243rD7P
             const prec = p.precio || 0;
             mensajeVendedor += `📦 ${nom} - ${Number(prec).toLocaleString()} XAF\n`;
             totalVendedor += Number(prec);
-            mensajeFangoo += `📦 ${nom} - ${Number(prec).toLocaleString()} XAF\n Vendedor: ${p.vendedor || 'Fangoo'}\n Tel: ${telVendedor}\n`;
+            mensajeFangoo += `📦 ${nom} - ${Number(prec).toLocaleString()} XAF\n Vendedor: ${p.vendedor || 'Fangoo'}\n`;
         });
 
-        subtotalProductos += totalVendedor;
         mensajeVendedor += `\n*SUBTOTAL: ${totalVendedor.toLocaleString()} XAF*\n\n`;
-        mensajeVendedor += `_El equipo de Fangoo llegará en 10-20 min para retirar el pedido. Confirma disponibilidad._`;
+        mensajeVendedor += `_El equipo de Fangoo llegará en 10-20 min para retirar el pedido._`;
 
         window.open(`whatsapp://send?phone=${telVendedor}&text=${encodeURIComponent(mensajeVendedor)}`, '_blank');
     });
 
-    const totalFinal = subtotalProductos + comisionEnvio;
-
     setTimeout(() => {
-        mensajeFangoo += `\n💵 *Subtotal Productos:* ${subtotalProductos.toLocaleString()} XAF\n`;
-        mensajeFangoo += `🛵 *Comisión de Envío:* ${comisionEnvio.toLocaleString()} XAF\n`;
-        mensajeFangoo += `💰 *TOTAL A COBRAR:* ${totalFinal.toLocaleString()} XAF\n\n`;
-        mensajeFangoo += `_ACCIÓN: Coordinar recogida y entrega al cliente._`;
-
+        mensajeFangoo += `\n💵 *Subtotal:* ${subtotalProductos.toLocaleString()} XAF\n`;
+        mensajeFangoo += `🛵 *Envío:* ${comisionEnvio.toLocaleString()} XAF\n`;
+        mensajeFangoo += `💰 *TOTAL:* ${totalFinal.toLocaleString()} XAF\n\n`;
+        mensajeFangoo += `_PDF del albarán enviado a tu email._`;
         window.open(`whatsapp://send?phone=${WHATSAPP_FANGOO}&text=${encodeURIComponent(mensajeFangoo)}`, '_blank');
     }, 2000);
 
