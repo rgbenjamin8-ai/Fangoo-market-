@@ -381,11 +381,12 @@ async function pedirWhatsApp() {
         document.querySelector('.btn-enviar').innerText = 'ENVIANDO...';
         document.querySelector('.btn-enviar').disabled = true;
 
-        await fetch(URL_SCRIPT, {
-            method: 'POST',
-            mode: 'no-cors',
-            body: JSON.stringify(datosParaServidor)
-        });
+     await fetch(URL_SCRIPT, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type': 'text/plain'},
+    body: JSON.stringify(datosParaServidor)
+});
 
         alert('¡Pedido enviado! ✅ Te contactaremos en 10-20 minutos.');
 
