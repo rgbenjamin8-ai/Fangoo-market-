@@ -346,11 +346,10 @@ async function pedirWhatsApp() {
 
     const nombre = document.getElementById('clienteNombre').value.trim();
     const telefono = document.getElementById('clienteTelefono').value.trim();
-    const email = document.getElementById('clienteEmail').value.trim();
     const direccion = document.getElementById('clienteDireccion').value.trim();
 
-    if (!nombre ||!telefono ||!email ||!direccion) {
-        return alert('⚠️ Por favor, completa todos los campos: nombre, teléfono, email y dirección.');
+    if (!nombre ||!telefono ||!direccion) {
+        return alert('⚠️ Por favor, completa todos los campos: nombre, teléfono y dirección.');
     }
 
     const subtotalProductos = carrito.reduce((sum, p) => sum + Number(p.precio || 0), 0);
@@ -363,7 +362,6 @@ async function pedirWhatsApp() {
         clienteNombre: nombre,
         clienteApellidos: '',
         clienteTelefono: telefono,
-        clienteEmail: email,
         clienteDireccion: direccion,
         gpsCliente: gpsCliente,
         comisionEnvio: comisionEnvio,
@@ -396,7 +394,7 @@ async function pedirWhatsApp() {
     let listaProductos = carrito.map(p => `• ${p.producto || p.nombre} - ${Number(p.precio).toLocaleString()} XAF`).join('%0A');
     
     let mensaje = `*🛒 NUEVO PEDIDO - FANGOO*%0A%0A`;
-    mensaje += `*CLIENTE*%0A👤 ${nombre}%0A📱 ${telefono}%0A📧 ${email}%0A📍 ${direccion}%0A`;
+    mensaje += `*CLIENTE*%0A👤 ${nombre}%0A📱 ${telefono}%0A📍 ${direccion}%0A`;
     if(gpsCliente) mensaje += `🗺️ GPS: https://maps.google.com/?q=${gpsCliente}%0A`;
     mensaje += `%0A*PEDIDO*%0A${listaProductos}%0A%0A`;
     mensaje += `Subtotal: ${subtotalProductos.toLocaleString()} XAF%0A`;
@@ -414,7 +412,6 @@ async function pedirWhatsApp() {
     document.getElementById('contador').innerText = 0;
     document.getElementById('clienteNombre').value = '';
     document.getElementById('clienteTelefono').value = '';
-    document.getElementById('clienteEmail').value = '';
     document.getElementById('clienteDireccion').value = '';
     document.getElementById('gpsCliente').innerText = '';
     cerrarCarrito();
@@ -443,7 +440,6 @@ async function enviarPaqueteWhatsApp() {
         clienteNombre: destNombre,
         clienteApellidos: '',
         clienteTelefono: destTelefono,
-        clienteEmail: '',
         clienteDireccion: destDireccion,
         gpsCliente: null,
         comisionEnvio: 2500,
