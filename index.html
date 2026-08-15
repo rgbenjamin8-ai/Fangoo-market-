@@ -376,36 +376,51 @@ async function pedirWhatsApp() {
         remitenteDireccion: 'Malabo, GQ'
     };
 
-    try {
-        document.querySelector('#modalCarrito .btn-enviar').innerText = 'ENVIANDO...';
-        document.querySelector('#modalCarrito .btn-enviar').disabled = true;
+    const btnEnviar = document.querySelector('#modalCarrito .btn-enviar');
+    btnEnviar.innerText = 'ENVIANDO...';
+    btnEnviar.disabled = true;
 
+    // 1. INTENTAR MANDAR A GOOGLE SCRIPT - SI FALLA, NO PASA NADA
+    try {
         await fetch(URL_SCRIPT, {
             method: 'POST',
             mode: 'no-cors',
             headers: {'Content-Type': 'text/plain'},
             body: JSON.stringify(datosParaServidor)
         });
-
-        alert('¡Pedido enviado! ✅ Te contactaremos en 10-20 minutos.');
-
-        carrito = [];
-        gpsCliente = null;
-        document.getElementById('contador').innerText = 0;
-        document.getElementById('clienteNombre').value = '';
-        document.getElementById('clienteTelefono').value = '';
-        document.getElementById('clienteEmail').value = '';
-        document.getElementById('clienteDireccion').value = '';
-        document.getElementById('gpsCliente').innerText = '';
-        cerrarCarrito();
-
     } catch (error) {
-        console.error('ERROR:', error);
-        alert('Error al enviar el pedido. Intenta de nuevo.');
-    } finally {
-        document.querySelector('#modalCarrito .btn-enviar').innerText = ' CONFIRMAR PEDIDO';
-        document.querySelector('#modalCarrito .btn-enviar').disabled = false;
+        console.log('Error Google Script, pero continuamos:', error);
     }
+
+    // 2. ABRIR WHATSAPP SIEMPRE - ESTO SÍ FUNCIONA
+    let listaProductos = carrito.map(p => `• ${p.producto || p.nombre} - ${Number(p.precio).toLocaleString()} XAF`).join('%0A');
+    
+    let mensaje = `*🛒 NUEVO PEDIDO - FANGOO*%0A%0A`;
+    mensaje += `*CLIENTE*%0A👤 ${nombre}%0A📱 ${telefono}%0A📧 ${email}%0A📍 ${direccion}%0A`;
+    if(gpsCliente) mensaje += `🗺️ GPS: https://maps.google.com/?q=${gpsCliente}%0A`;
+    mensaje += `%0A*PEDIDO*%0A${listaProductos}%0A%0A`;
+    mensaje += `Subtotal: ${subtotalProductos.toLocaleString()} XAF%0A`;
+    mensaje += `Envío: ${comisionEnvio.toLocaleString()} XAF%0A`;
+    mensaje += `*TOTAL: ${totalFinal.toLocaleString()} XAF*%0A%0A`;
+    mensaje += `_Pago contra entrega_`
+
+    window.open(`https://wa.me/${WHATSAPP_FANGOO}?text=${mensaje}`, '_blank');
+    
+    alert('¡Pedido enviado! ✅ Te contactaremos en 10-20 minutos.');
+
+    // Limpiar
+    carrito = [];
+    gpsCliente = null;
+    document.getElementById('contador').innerText = 0;
+    document.getElementById('clienteNombre').value = '';
+    document.getElementById('clienteTelefono').value = '';
+    document.getElementById('clienteEmail').value = '';
+    document.getElementById('clienteDireccion').value = '';
+    document.getElementById('gpsCliente').innerText = '';
+    cerrarCarrito();
+
+    btnEnviar.innerText = ' CONFIRMAR PEDIDO';
+    btnEnviar.disabled = false;
 }
 
 async function enviarPaqueteWhatsApp() {
