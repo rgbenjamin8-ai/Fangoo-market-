@@ -233,14 +233,51 @@ function abrirSeguimiento() {
 }
 function cerrarSeguimiento() { document.getElementById('modalSeguimiento').style.display = 'none'; }
 
-// CARGA DE PRODUCTOS
-async function cargarProductos() {
+async function pedirWhatsApp() {
+    
+    const nombre = document.getElementById('clienteNombre').value.trim();
+    const telefono = document.getElementById('clienteTelefono').value.trim();
+    const email = document.getElementById('clienteEmail').value.trim();
+    const direccion = document.getElementById('clienteDireccion').value.trim();
+    
+    const subtotalProductos = carrito.reduce((sum, p) => sum + p.precio, 0);
+    const comisionEnvio = calcularComisionEnvio(subtotalProductos);
+    const totalFinal = subtotalProductos + comisionEnvio;
+    const numAlbaran = new Date().getTime();
+    const datosParaServidor = {
+        tipoPedido: 'entrega',
+        fecha: new Date().toLocaleString('es-GQ'),
+        clienteNombre: nombre,
+        clienteApellidos: '',
+        clienteTelefono: telefono,
+        clienteEmail: email,
+        clienteDireccion: direccion,
+        gpsCliente: gpsCliente,
+        comisionEnvio: comisionEnvio,
+        subtotal: subtotalProductos,
+        total: totalFinal,
+        carrito: carrito,
+        nombreRepartidor: '',
+        remitenteNombre: 'Fangoo Market',
+        remitenteTelefono: '240555225370',
+        remitenteDireccion: 'Malabo, GQ'
+    }
+
+    const URL_SCRIPT = 'https://script.google.com/macros/s/AKfycbwtLLKkmLCndfAJ4Eb38wFdeJvPNjvBGBd9qb10SxmfTD9gWzcbof-b3mr-6xNv9R4a/exec';
+    
     try {
-        const res = await fetch(SHEETDB_URL);
-        productos = await res.json();
-        mostrarProductos();
-    } catch(e) {
-        document.getElementById('productos').innerHTML = '<p style="text-align:center;color:red;padding:20px;">Error al conectar con el servidor.</p>';
+        await fetch(URL_SCRIPT, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify(datosParaServidor)
+        });
+        
+        alert('¡Pedido enviado! ✅ Te contactaremos en 10-20 minutos.');
+        carrito = [];
+        actualizarCarrito();
+        
+    } catch (error) {
+        alert('Error al enviar el pedido. Intenta de nuevo o contáctanos por WhatsApp.');
     }
 }
 
@@ -503,6 +540,26 @@ async function pedirWhatsApp() {
         return alert('⚠️ El carrito está vacío.');
     }
 
+const datosParaServidor = {
+    tipoPedido: 'entrega', // o 'envio' si es envío de paquete
+    fecha: new Date().toLocaleString('es-GQ'),
+    clienteNombre: nombre,
+    clienteApellidos: '', // si lo pides en el form
+    clienteTelefono: telefono,
+    clienteEmail: document.getElementById('clienteEmail').value.trim(),
+    clienteDireccion: direccion,
+    gpsCliente: gpsCliente,
+    comisionEnvio: comisionEnvio,
+    subtotal: subtotalProductos,
+    total: totalFinal,
+    carrito: carrito,
+    nombreRepartidor: '', // Lo rellenas cuando asignes repartidor
+    
+    // Solo para envío de paquetes
+    remitenteNombre: 'Fangoo Market',
+    remitenteTelefono: '240555225370',
+    remitenteDireccion: 'Malabo, GQ'
+};
     const inputNombre = document.getElementById('clienteNombre');
     const inputTelefono = document.getElementById('clienteTelefono');
     const inputDireccion = document.getElementById('clienteDireccion');
