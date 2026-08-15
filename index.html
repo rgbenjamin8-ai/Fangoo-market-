@@ -47,8 +47,7 @@
        .tracking-progress-line {position:absolute;top:18px;left:15%;height:4px;background:#00A651;z-index:2;transition:width 0.3s;}
        .step {position:relative;z-index:3;text-align:center;width:30%;}
        .step-icon {width:36px;height:36px;border-radius:50%;background:#ddd;color:#666;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-weight:bold;font-size:14px;}
-       .step.active.step-icon {background:#00A651;color:white;}
-       .step-label {font-size:11px;color:#555;font-weight:bold;}
+       .step.active .step-icon {background:#00A651;color:white;}
     </style>
 </head>
 <body>
@@ -187,10 +186,17 @@ function calcularComisionEnvio(subtotal) {
 async function cargarProductos() {
     try {
         const response = await fetch(SHEETDB_URL);
+        if (!response.ok) throw new Error('SheetDB error');
         productos = await response.json();
         mostrarProductos();
     } catch (error) {
-        document.getElementById('productos').innerHTML = '<p style="text-align:center;padding:40px">Error cargando productos. Recarga la página.</p>';
+        console.error('Error cargando productos:', error);
+        productos = [
+            {producto: "Plátano Maduro", precio: 500, vendedor: "Mamá Ana 222123456", categoria: "Frutas", descripcion: "Racimo fresco"},
+            {producto: "Yuca", precio: 1000, vendedor: "Don Pedro 555987654", categoria: "Tubérculos", descripcion: "Saco 5kg"}
+        ];
+        mostrarProductos();
+        document.getElementById('productos').insertAdjacentHTML('afterbegin', '<p style="background:#fff3cd;padding:10px;border-radius:8px;margin-bottom:10px">⚠️ Usando productos de prueba. Revisa SheetDB.</p>');
     }
 }
 
@@ -218,7 +224,7 @@ function abrirAlbaranHTML(htmlContenido, nombreArchivo) {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        alert('Pop-ups bloqueados. Se descargó el albarán. Ábrelo y dale a "Imprimir > Guardar como PDF"');
+        alert('Pop-ups bloqueados. Se descargó el albarán.');
     }
     setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
@@ -334,12 +340,6 @@ function obtenerGPS() {
     }
 }
 
-function extraerTelefono(texto) {
-    if(!texto) return WHATSAPP_FANGOO;
-    const match = texto.match(/(222|555)\d{6}/);
-    return match? '240' + match[0] : WHATSAPP_FANGOO;
-}
-
 async function pedirWhatsApp() {
     if (!carrito || carrito.length === 0) {
         return alert('⚠️ El carrito está vacío.');
@@ -378,19 +378,18 @@ async function pedirWhatsApp() {
     };
 
     try {
-        document.querySelector('.btn-enviar').innerText = 'ENVIANDO...';
-        document.querySelector('.btn-enviar').disabled = true;
+        document.querySelector('#modalCarrito .btn-enviar').innerText = 'ENVIANDO...';
+        document.querySelector('#modalCarrito .btn-enviar').disabled = true;
 
-     await fetch(URL_SCRIPT, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: {'Content-Type': 'text/plain'},
-    body: JSON.stringify(datosParaServidor)
-});
+        await fetch(URL_SCRIPT, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {'Content-Type': 'text/plain'},
+            body: JSON.stringify(datosParaServidor)
+        });
 
         alert('¡Pedido enviado! ✅ Te contactaremos en 10-20 minutos.');
 
-        // Limpiar
         carrito = [];
         gpsCliente = null;
         document.getElementById('contador').innerText = 0;
@@ -402,15 +401,15 @@ async function pedirWhatsApp() {
         cerrarCarrito();
 
     } catch (error) {
-        console.error('ERROR ENVIANDO A GOOGLE:', error);
-        alert('Error al enviar el pedido. Intenta de nuevo o contáctanos por WhatsApp.');
+        console.error('ERROR:', error);
+        alert('Error al enviar el pedido. Intenta de nuevo.');
     } finally {
-        document.querySelector('.btn-enviar').innerText = ' CONFIRMAR PEDIDO';
-        document.querySelector('.btn-enviar').disabled = false;
+        document.querySelector('#modalCarrito .btn-enviar').innerText = ' CONFIRMAR PEDIDO';
+        document.querySelector('#modalCarrito .btn-enviar').disabled = false;
     }
 }
 
-function enviarPaqueteWhatsApp() {
+async function enviarPaqueteWhatsApp() {
     const remNombre = document.getElementById('remNombre').value.trim();
     const remTelefono = document.getElementById('remTelefono').value.trim();
     const remDireccion = document.getElementById('remDireccion').value.trim();
@@ -420,8 +419,8 @@ function enviarPaqueteWhatsApp() {
     const tipo = document.getElementById('tipoPaquete').value;
     const desc = document.getElementById('descripcionPaquete').value.trim();
 
-    if(!remNombre ||!remTelefono ||!destNombre ||!destTelefono ||!tipo) {
-        return alert('⚠️ Rellena los campos obligatorios: remitente, destinatario y tipo de paquete.');
+    if(!remNombre ||!remTelefono ||!remDireccion ||!destNombre ||!destTelefono ||!destDireccion ||!tipo) {
+        return alert('⚠️ Rellena todos los campos obligatorios.');
     }
 
     const datosParaServidor = {
@@ -456,6 +455,7 @@ function enviarPaqueteWhatsApp() {
         await fetch(URL_SCRIPT, {
             method: 'POST',
             mode: 'no-cors',
+            headers: {'Content-Type': 'text/plain'},
             body: JSON.stringify(datosParaServidor)
         });
 
@@ -464,11 +464,9 @@ function enviarPaqueteWhatsApp() {
         if(gpsRemitente) mensaje += `🗺️ GPS: https://maps.google.com/?q=${gpsRemitente}%0A`;
         mensaje += `%0A*DESTINATARIO*%0A👤 ${destNombre}%0A📱 ${destTelefono}%0A📍 ${destDireccion}%0A%0A`;
         mensaje += `*PAQUETE*%0A📦 Tipo: ${tipo}%0A📝 Descripción: ${desc || 'Sin descripción'}%0A`;
-        mensaje += `🛵 *Tarifa de Envío Paquete:* 2,500 XAF%0A%0A`;
-        mensaje += `_El repartidor de Fangoo llegará en 10-20 min para retirar el paquete._`;
+        mensaje += `🛵 *Tarifa:* 2,500 XAF`;
 
         window.open(`https://wa.me/${WHATSAPP_FANGOO}?text=${mensaje}`, '_blank');
-
         alert('¡Solicitud enviada! ✅ Revisa tu Gmail para el albarán PDF.');
 
         document.getElementById('remNombre').value = '';
@@ -484,7 +482,7 @@ function enviarPaqueteWhatsApp() {
         cerrarEnvio();
 
     } catch (error) {
-        console.error('ERROR ENVIANDO PAQUETE:', error);
+        console.error('ERROR:', error);
         alert('Error al enviar la solicitud. Intenta de nuevo.');
     } finally {
         document.querySelector('#modalEnvio .btn-enviar').innerText = ' Solicitar Recogida (2,500 XAF)';
@@ -506,22 +504,24 @@ function actualizarPuntosSeguimiento(punto) {
     if(punto === 1) {
         step1.classList.add('active');
         progressLine.style.width = '0%';
-        statusDetalle.innerHTML = '<strong>Punto 1: Solicitado</strong><br>Tu pedo/envío se ha registrado. Esperando asignación de repartor.';
+        statusDetalle.innerHTML = '<strong>Punto 1: Solicitado</strong><br>Tu pedido/envío se ha registrado. Esperando asignación de repartidor.';
     } else if(punto === 2) {
         step1.classList.add('active');
         step2.classList.add('active');
-        progressLine.style.wth = '35%';
-        statusDetalle.innerHTML = '<strong>Punto 2: En Camino</strong><br>El repartor de Fangoo está recogiendo el paquete/producto para llevarlo a su destino.';
+        progressLine.style.width = '35%';
+        statusDetalle.innerHTML = '<strong>Punto 2: En Camino</strong><br>El repartidor de Fangoo está recogiendo el paquete/producto.';
     } else if(punto === 3) {
         step1.classList.add('active');
         step2.classList.add('active');
         step3.classList.add('active');
-        progressLine.style.wth = '70%';
-        statusDetalle.innerHTML = '<strong>Punto 3: Entregado</strong><br>¡El pedido ha sido entregado con éxito al destinatario!';
+        progressLine.style.width = '70%';
+        statusDetalle.innerHTML = '<strong>Punto 3: Entregado</strong><br>¡El pedido ha sido entregado con éxito!';
     }
 }
 
-cargarProductos();
+document.addEventListener('DOMContentLoaded', function() {
+    cargarProductos();
+});
 </script>
 </body>
 </html>
